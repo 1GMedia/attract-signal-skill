@@ -32,6 +32,18 @@ def percentile_rank(value: Optional[float], values: List[float]) -> Optional[flo
     return below_or_equal / len(values)
 
 
+def ordinal(value: int) -> str:
+    if 10 <= value % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(value % 10, "th")
+    return f"{value}{suffix}"
+
+
+def has_performance_metrics(video: Dict[str, Any]) -> bool:
+    return any(isinstance(video.get(key), int) for key in ("view_count", "like_count", "comment_count", "share_count", "save_count"))
+
+
 def recompute_cross_scan_scores(videos: List[Dict[str, Any]]) -> None:
     scores = [float(v.get("signal_score")) for v in videos if isinstance(v.get("signal_score"), (int, float))]
     view_ratios = [float(v.get("relative_views")) for v in videos if isinstance(v.get("relative_views"), (int, float))]
@@ -52,8 +64,8 @@ def recompute_cross_scan_scores(videos: List[Dict[str, Any]]) -> None:
             item
             for item in [
                 video.get("signal_reason"),
-                f"{round(score_rank * 100)}th percentile by scan score" if scores else None,
-                f"{round(view_rank * 100)}th percentile by relative views" if view_ratios else None,
+                f"{ordinal(round(score_rank * 100))} percentile by scan score" if scores else None,
+                f"{ordinal(round(view_rank * 100))} percentile by relative views" if view_ratios else None,
             ]
             if item
         )
@@ -101,16 +113,23 @@ def main() -> int:
         reverse=True,
     )
 
+    metric_videos = [video for video in videos if has_performance_metrics(video)]
+    discovery_items = [video for video in videos if not has_performance_metrics(video)]
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "scan_count": len(scans),
-        "video_count": len(videos),
-        "top_count": min(args.top, len(videos)),
+        "item_count": len(videos),
+        "video_count": len(metric_videos),
+        "discovery_count": len(discovery_items),
+        "top_count": min(args.top, len(metric_videos or videos)),
         "channels": [channel_summary(scan) for scan in scans],
-        "top_signals": videos[: args.top],
+        "top_signals": (metric_videos or videos)[: args.top],
+        "discovery_items": discovery_items,
         "videos": videos,
         "notes": [
             "cross_channel_signal_score blends per-channel score, cross-scan percentile, relative views, and engagement",
+            "top_signals excludes metric-less discovery/profile rows when measured content is available",
             "all strategy outputs should cite source_url and avoid copying creator-specific expression",
         ],
     }
@@ -126,4 +145,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -98,6 +98,10 @@ def md_escape(value: Any) -> str:
     return str(value or "").replace("|", "\\|").replace("\n", " ")
 
 
+def has_performance_metrics(video: Dict[str, Any]) -> bool:
+    return any(isinstance(video.get(key), int) for key in ("view_count", "like_count", "comment_count", "share_count", "save_count"))
+
+
 def words(text: str) -> List[str]:
     return re.findall(r"[a-zA-Z][a-zA-Z0-9'-]+", text.lower())
 
@@ -193,16 +197,26 @@ def platform_rows(videos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         grouped.setdefault(platform, []).append(video)
     rows = []
     for platform, items in sorted(grouped.items()):
-        avg_score = sum(float(item.get("cross_channel_signal_score") or item.get("signal_score") or 0) for item in items) / max(len(items), 1)
-        best = max(items, key=lambda item: item.get("cross_channel_signal_score") or item.get("signal_score") or 0)
+        measured = [item for item in items if has_performance_metrics(item)]
+        discovery = [item for item in items if not has_performance_metrics(item)]
+        score_items = measured or items
+        avg_score = sum(float(item.get("cross_channel_signal_score") or item.get("signal_score") or 0) for item in score_items) / max(len(score_items), 1)
+        best = max(score_items, key=lambda item: item.get("cross_channel_signal_score") or item.get("signal_score") or 0)
         rows.append({
             "platform": platform,
             "count": len(items),
+            "measured_count": len(measured),
+            "discovery_count": len(discovery),
             "avg_score": round(avg_score),
             "best_title": best.get("title") or best.get("id"),
             "best_url": best.get("source_url"),
         })
     return rows
+
+
+def discovery_note(video: Dict[str, Any]) -> str:
+    raw = video.get("raw") if isinstance(video.get("raw"), dict) else {}
+    return raw.get("notes") or video.get("notes") or video.get("signal_reason") or "Discovery/profile row; performance metrics were not supplied."
 
 
 def thumbnail_concept(video: Dict[str, Any], brand: Dict[str, Any]) -> str:
@@ -266,7 +280,13 @@ def transcript_beats(transcript: Dict[str, Any]) -> List[str]:
 
 
 def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, transcripts: Optional[Dict[str, Dict[str, Any]]] = None) -> str:
-    top = (signals.get("top_signals") or signals.get("videos") or [])[:top_n]
+    all_items = signals.get("videos") or signals.get("top_signals") or []
+    ranked = signals.get("top_signals") or all_items
+    measured_ranked = [item for item in ranked if has_performance_metrics(item)]
+    top = (measured_ranked or ranked)[:top_n]
+    discovery_items = signals.get("discovery_items")
+    if discovery_items is None:
+        discovery_items = [item for item in all_items if not has_performance_metrics(item)]
     transcripts = transcripts or {}
     keywords = top_keywords(top)
     lines: List[str] = []
@@ -280,8 +300,13 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("")
     lines.append("## Executive Summary")
     lines.append("")
-    lines.append(f"- Analyzed {signals.get('video_count', len(top))} videos across {signals.get('scan_count', 1)} scan(s).")
+    item_count = signals.get("item_count", signals.get("video_count", len(all_items or top)))
+    video_count = signals.get("video_count", len([item for item in all_items if has_performance_metrics(item)]))
+    discovery_count = signals.get("discovery_count", len(discovery_items))
+    lines.append(f"- Analyzed {video_count} measured content item(s) and {discovery_count} discovery/profile row(s) across {signals.get('scan_count', 1)} scan(s).")
     lines.append("- The strongest signals are ranked by source performance, channel-relative outlier strength, engagement, and metadata completeness.")
+    if item_count != video_count:
+        lines.append("- Metric-less social profile discoveries are listed separately and not treated as performance winners.")
     lines.append("- Recommendations are industry-agnostic by default and should be adapted to the user's actual proof points before production.")
     if keywords:
         lines.append(f"- Repeated language signals: {', '.join(keywords)}.")
@@ -299,6 +324,17 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
             f"{md_escape(strategy_angle(video, brand))} |"
         )
     lines.append("")
+    if discovery_items:
+        lines.append("## Discovered Social Profiles")
+        lines.append("")
+        lines.append("| Platform | Source | Status / note |")
+        lines.append("|---|---|---|")
+        for item in discovery_items:
+            platform = item.get("platform") or "unknown"
+            title = item.get("title") or item.get("id") or platform
+            url = item.get("source_url") or item.get("watch_url") or ""
+            lines.append(f"| {md_escape(platform)} | [{md_escape(title)}]({url}) | {md_escape(discovery_note(item))} |")
+        lines.append("")
     lines.append("## Source Evidence")
     lines.append("")
     for index, video in enumerate(top, 1):
@@ -329,16 +365,17 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("")
     lines.append("## Platform Comparison")
     lines.append("")
-    lines.append("| Platform | Signals | Avg score | Best source | Platform-specific strategy |")
-    lines.append("|---|---:|---:|---|---|")
-    for row in platform_rows(top):
+    lines.append("| Platform | Measured content | Discovery rows | Avg measured score | Best measured/source item | Platform-specific strategy |")
+    lines.append("|---|---:|---:|---:|---|---|")
+    platform_basis = all_items or top
+    for row in platform_rows(platform_basis):
         strategy = {
             "youtube": "Package as Shorts with strong first-frame clarity and source-cited follow-up ideas.",
             "tiktok": "Lean into fast native trend language, comments-as-briefs, and looser creator delivery.",
             "instagram": "Prioritize visual polish, saveable tips, carousels/Reels pairing, and profile trust.",
             "x": "Pair short video with a text hook/thread that frames the insight before playback.",
         }.get(row["platform"], "Adapt the winning premise to the platform's native pacing and audience expectations.")
-        lines.append(f"| {md_escape(row['platform'])} | {row['count']} | {row['avg_score']} | [{md_escape(row['best_title'])}]({row['best_url']}) | {md_escape(strategy)} |")
+        lines.append(f"| {md_escape(row['platform'])} | {row['measured_count']} | {row['discovery_count']} | {row['avg_score']} | [{md_escape(row['best_title'])}]({row['best_url']}) | {md_escape(strategy)} |")
     lines.append("")
     lines.append("## Transcript Insights")
     lines.append("")
@@ -438,7 +475,9 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(report, encoding="utf-8")
     if args.calendar:
-        top = (signals.get("top_signals") or signals.get("videos") or [])[: args.top]
+        ranked = signals.get("top_signals") or signals.get("videos") or []
+        measured_ranked = [item for item in ranked if has_performance_metrics(item)]
+        top = (measured_ranked or ranked)[: args.top]
         write_calendar(args.calendar, build_calendar_rows(top, brand, 30))
     return 0
 
