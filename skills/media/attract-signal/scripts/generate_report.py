@@ -613,6 +613,140 @@ def filled_hooks_for_template(template: str, spine: Dict[str, Any], tag: str) ->
     return fallback[:2]
 
 
+def collapsed_hook_pattern(winners: List[Dict[str, Any]]) -> bool:
+    if len(winners) < 3:
+        return False
+    counts: Dict[str, int] = {}
+    for entry in winners:
+        key = f"{entry.get('pattern_tag')}::{entry.get('template')}"
+        counts[key] = counts.get(key, 0) + 1
+    return max(counts.values(), default=0) >= max(3, len(winners) - 1)
+
+
+def comedy_subtemplate(entry: Dict[str, Any], index: int) -> Dict[str, Any]:
+    text = f"{entry.get('source_title', '')} {entry.get('raw_hook', '')}".lower()
+    if any(term in text for term in ("shock", "shocks", "surprise")):
+        return {
+            "label": "Shock Answer",
+            "template": "[Unexpected person/detail] shocks [host/room] with [too-honest answer].",
+            "hooks": [
+                "A normal job answer somehow scared the whole room.",
+                "He answered one basic question and everyone changed sides.",
+            ],
+        }
+    if any(term in text for term in ("roast", "roasts", "hates", "hated")):
+        return {
+            "label": "Roast Escalation",
+            "template": "[Comic] roasts [target] by treating [flaw/detail] like obvious evidence.",
+            "hooks": [
+                "I tried one safe joke and accidentally started a roast.",
+                "The first tag was mean. The second one made it undeniable.",
+            ],
+        }
+    if any(term in text for term in ("destroy", "destroys", "wrong")):
+        return {
+            "label": "Underdog Reversal",
+            "template": "[Underdog] turns [authority challenge] back on [host/panel].",
+            "hooks": [
+                "He was supposed to get roasted, then the room flipped.",
+                "The panel thought they had him until one line changed it.",
+            ],
+        }
+    if "impersonation" in text:
+        return {
+            "label": "Instant Character",
+            "template": "[Specific character/voice] becomes funny before the joke even starts.",
+            "hooks": [
+                "The impression was funny before he even got to the joke.",
+                "One voice turned a normal premise into a character bit.",
+            ],
+        }
+    fallback = [
+        {
+            "label": "Crowd-Work Premise",
+            "template": "[Normal audience answer] becomes [absurd premise] after one follow-up.",
+            "hooks": [
+                "He said one normal sentence and lost the room.",
+                "This started like small talk and became a punchline.",
+            ],
+        },
+        {
+            "label": "Backfire Bit",
+            "template": "[Safe premise] backfires when [hidden assumption] gets exposed.",
+            "hooks": [
+                "I tried one safe joke and it immediately backfired.",
+                "The harmless setup got weird in three seconds.",
+            ],
+        },
+        {
+            "label": "Tag Ladder",
+            "template": "[One audience detail] gets three tags, each sharper than the last.",
+            "hooks": [
+                "One audience detail gave me three tags in a row.",
+                "The first joke worked, so I kept turning the screw.",
+            ],
+        },
+    ]
+    return fallback[index % len(fallback)]
+
+
+def generic_subtemplate(entry: Dict[str, Any], spine: Dict[str, Any], index: int) -> Dict[str, Any]:
+    topic = channel_topic(spine).replace("_", " ")
+    options = [
+        {
+            "label": "Unexpected Condition",
+            "template": "[Unexpected condition] changes how [avatar/problem] works.",
+            "hooks": [
+                f"One weird constraint changed the whole {topic} result.",
+                "The normal way stopped working when this detail changed.",
+            ],
+        },
+        {
+            "label": "Proof Turn",
+            "template": "[Visible proof] reveals [surprising lesson/result].",
+            "hooks": [
+                "The proof did not show up until the final step.",
+                "The result looked boring until the reveal.",
+            ],
+        },
+        {
+            "label": "Mistake Reversal",
+            "template": "[Common mistake] becomes [better path] after [specific correction].",
+            "hooks": [
+                "I was doing this backwards the whole time.",
+                "The obvious move was the thing breaking the result.",
+            ],
+        },
+        {
+            "label": "Constraint Test",
+            "template": "[Avatar] tries [promise] under [time/resource constraint].",
+            "hooks": [
+                "I tried to make this work with one constraint.",
+                "The shortcut only worked when I made the test harder.",
+            ],
+        },
+        {
+            "label": "Reaction Proof",
+            "template": "[Person/audience] reacts when [payoff] becomes visible.",
+            "hooks": [
+                "They did not believe it until the result showed up.",
+                "The reaction made the whole point obvious.",
+            ],
+        },
+    ]
+    return options[index % len(options)]
+
+
+def branch_collapsed_hooks(winners: List[Dict[str, Any]], spine: Dict[str, Any]) -> None:
+    if not collapsed_hook_pattern(winners):
+        return
+    for index, entry in enumerate(winners):
+        branch = comedy_subtemplate(entry, index) if channel_topic(spine) == "comedy" else generic_subtemplate(entry, spine, index)
+        entry["template"] = branch["template"]
+        entry["filled_hooks"] = branch["hooks"]
+        entry["subtemplate"] = branch["label"]
+
+
 def adjacent_hooks(entry: Dict[str, Any], spine: Dict[str, Any]) -> List[str]:
     template = entry["template"]
     avatar = spine["avatar"]
@@ -638,6 +772,7 @@ def build_hook_library(top: List[Dict[str, Any]], transcripts: Dict[str, Dict[st
         }
         entry["filled_hooks"] = filled_hooks_for_template(entry["template"], spine, entry["pattern_tag"])
         winners.append(entry)
+    branch_collapsed_hooks(winners, spine)
     adjacent: List[Dict[str, Any]] = []
     for entry in winners[:5]:
         for hook in adjacent_hooks(entry, spine)[:1]:
@@ -740,6 +875,8 @@ def product_demo_step(brand: Dict[str, Any], spine: Dict[str, Any]) -> str:
     product = product_label(brand, spine)
     if spine.get("product_mode"):
         return f"Show {product}, apply it to the mess, then reveal the result."
+    if channel_topic(spine) == "comedy":
+        return "Setup -> assumption -> turn -> tag."
     return "Show the proof fast, then make the payoff visible."
 
 
@@ -749,6 +886,8 @@ def script_meat_line(video: Dict[str, Any], brand: Dict[str, Any], spine: Dict[s
         if channel_topic(spine) == "cleaning":
             return f"Show {product} hitting the mess, then reveal the visible lift/wipe-away result."
         return f"Show {product} in use, then reveal the specific result."
+    if channel_topic(spine) == "comedy":
+        return "Give the setup, reveal the assumption, flip it, then add one tag."
     return f"Show the {infer_meat_type(video).lower()} proof fast, then make the payoff visible."
 
 
@@ -1041,12 +1180,13 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("")
     lines.append("### Top 5 Winning Hooks")
     lines.append("")
-    lines.append("| Rank | Raw hook | Template | Ready-to-read hooks | Pattern tag | Meat | Source |")
-    lines.append("|---:|---|---|---|---|---|---|")
+    lines.append("| Rank | Raw hook | Sub-template | Template | Ready-to-read hooks | Pattern tag | Meat | Source |")
+    lines.append("|---:|---|---|---|---|---|---|---|")
     for index, hook in enumerate(hook_library["winners"], 1):
         filled = "<br>".join(md_escape(line) for line in (hook.get("filled_hooks") or []))
         lines.append(
-            f"| {index} | {md_escape(hook['raw_hook'])} | {md_escape(hook['template'])} | {filled} | "
+            f"| {index} | {md_escape(hook['raw_hook'])} | {md_escape(hook.get('subtemplate') or hook['pattern_tag'])} | "
+            f"{md_escape(hook['template'])} | {filled} | "
             f"{md_escape(hook['pattern_tag'])} | {md_escape(hook['meat_type'])} | [source]({hook['source_url']}) |"
         )
     lines.append("")

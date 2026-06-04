@@ -374,6 +374,8 @@ After individual analyses, make a channel/trend brief:
 - 2 ready-to-read hook lines for each top template:
 - Winner-adjacent variations:
 - Pattern tags: Curiosity, Challenge, Spectacle, Transformation, Social Proof, Narrative
+- If the top 5 collapse into the same pattern/template, branch the dominant pattern into 3-5 sub-templates using title/transcript cues, then rotate those sub-templates through the 14-day sprint.
+- For comedy/open-mic reports, turn Narrative collapse into joke sub-templates such as Shock Answer, Roast Escalation, Underdog Reversal, Instant Character, Backfire Bit, Crowd-Work Premise, and Tag Ladder.
 
 ## Repeating Visual Patterns
 - Visual formulas:
@@ -390,6 +392,7 @@ After individual analyses, make a channel/trend brief:
   - show application/use
   - show result
 - Product names, offer claims, URLs, and discount codes must come from `brand.yaml` or a verified product page. Do not invent product names, fake brands, fake coupon codes, or unsupported claims.
+- For comedy/open-mic reports, convert `Story` meat into a bit skeleton: setup, assumption, turn, tag.
 - Short CTA variants by path, with IDs like `cta_sub_1` or `cta_apply_1`:
 
 ## Script Drafts
@@ -509,6 +512,7 @@ python3 $SKILL_DIR/scripts/signal_library.py search "challenge"
 - [ ] Individual breakdowns include trend type, hook, visual hooks, and signal pattern.
 - [ ] Channel-level synthesis starts with Avatar, Promise, Proof, and Path.
 - [ ] Hook library includes raw hooks, templates, ready-to-read hook lines, pattern tags, and winner-adjacent variants.
+- [ ] If a single hook pattern dominates, the report branches it into distinct sub-templates and rotates them in the sprint.
 - [ ] Script and shot-list sections use creator-facing script lines plus builder notes for Hook -> Meat -> Payoff -> CTA.
 - [ ] Product brands with `product_mode` show product, application, and result inside the meat.
 - [ ] Reports stay industry-agnostic unless the user supplies brand context.
