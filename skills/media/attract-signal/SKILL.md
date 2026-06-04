@@ -150,6 +150,20 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/analyz
 
 The combined output ranks signals across channels with `cross_channel_signal_score` and preserves every `source_url`.
 
+### 4b. Import non-YouTube platforms from exports
+
+YouTube Shorts is the only built-in live scraper. For TikTok, Instagram Reels, X video, or other platforms, normalize user-provided CSV/JSON exports:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/import_platform.py \
+  --platform mixed \
+  --input platform-export.csv \
+  --source-name "Competitor multi-platform export" \
+  --out platform-normalized.json
+```
+
+Then include `platform-normalized.json` in `analyze_signals.py` alongside YouTube scans. This gives cross-platform normalization and platform-specific strategy recommendations without pretending to scrape restricted platforms.
+
 ### 5. Generate the strategy report
 
 For generic industry-agnostic strategy:
@@ -302,7 +316,15 @@ For each key frame:
 
 For now, the expected final deliverable is a **Google Doc** containing the trend brief, citations, scripts, shot lists, and storyboard prompts. Draft locally first as Markdown, then publish the Markdown to Google Docs with `gogcli` after Google auth is working and the user has approved the write.
 
-Preferred `gogcli` flow for the current `gog` CLI:
+Preferred publishing helper:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/publish_doc.py \
+  --file attract-signal-report.md \
+  --title "Attract Signal Brief - <Brand>"
+```
+
+Direct `gogcli` flow for the current `gog` CLI:
 
 ```bash
 gog docs create "YouTube Shorts Trend Brief - <Channel>" --file brief.md --json
@@ -319,6 +341,26 @@ gog drive get <docId> --json --select id,name,mimeType,webViewLink,owners
 ```
 
 If `gog` is unavailable, use `google-workspace`'s `GAPI docs create` / `GAPI docs append` flow. Never create, edit, or share Google Docs without user approval. If Google auth is not set up, stop after the local Markdown artifact and tell the user exactly what OAuth/install step is missing.
+
+### 9. Google Sheets calendar export
+
+After the user approves a Sheets write:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/export_calendar_sheets.py \
+  --calendar content-calendar.csv \
+  --title "Attract Signal Calendar - <Brand>"
+```
+
+### 10. Reusable signal library
+
+Save top signals for compounding strategy memory:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal_library.py add --signals signals.json --top-only
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal_library.py list
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal_library.py search "challenge"
+```
 
 ## Ethical / Brand Safety Rules
 
@@ -348,4 +390,7 @@ If `gog` is unavailable, use `google-workspace`'s `GAPI docs create` / `GAPI doc
 - [ ] Channel-level synthesis produces original brand angles, not copied scripts.
 - [ ] Reports stay industry-agnostic unless the user supplies brand context.
 - [ ] 30-day calendar rows include source links.
+- [ ] Thumbnail concepts and storyboard/image-generation prompts avoid copying source creators.
+- [ ] Non-YouTube platform data came from user-provided exports and is labeled by platform.
+- [ ] Reusable signal library updates are local unless the user explicitly asks to share/export them.
 - [ ] Any Google Doc write was approved and the returned Doc URL/ID was verified.

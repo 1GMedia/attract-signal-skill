@@ -186,6 +186,37 @@ def build_calendar_rows(top: List[Dict[str, Any]], brand: Dict[str, Any], days: 
     return rows
 
 
+def platform_rows(videos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for video in videos:
+        platform = str(video.get("platform") or "youtube")
+        grouped.setdefault(platform, []).append(video)
+    rows = []
+    for platform, items in sorted(grouped.items()):
+        avg_score = sum(float(item.get("cross_channel_signal_score") or item.get("signal_score") or 0) for item in items) / max(len(items), 1)
+        best = max(items, key=lambda item: item.get("cross_channel_signal_score") or item.get("signal_score") or 0)
+        rows.append({
+            "platform": platform,
+            "count": len(items),
+            "avg_score": round(avg_score),
+            "best_title": best.get("title") or best.get("id"),
+            "best_url": best.get("source_url"),
+        })
+    return rows
+
+
+def thumbnail_concept(video: Dict[str, Any], brand: Dict[str, Any]) -> str:
+    hook = infer_hook(video)
+    industry = brand.get("industry") or "your industry"
+    if "transformation" in hook:
+        return f"Split-frame before/after result in {industry}; big contrast, 3-5 word overlay, proof visible."
+    if "countdown" in hook or "specificity" in hook:
+        return "Large number/progress cue, expressive reaction, simple high-contrast background."
+    if "tension" in hook:
+        return "Freeze the highest-tension moment with a short contradiction overlay and clear subject focus."
+    return "Clean close-up of the action/result with one curiosity phrase and no clutter."
+
+
 def write_calendar(path: Path, rows: List[Dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -296,6 +327,19 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("- Human reaction: show surprise, relief, tension, or satisfaction when possible.")
     lines.append("- Repeatable proof: make the viewer understand the result without needing context.")
     lines.append("")
+    lines.append("## Platform Comparison")
+    lines.append("")
+    lines.append("| Platform | Signals | Avg score | Best source | Platform-specific strategy |")
+    lines.append("|---|---:|---:|---|---|")
+    for row in platform_rows(top):
+        strategy = {
+            "youtube": "Package as Shorts with strong first-frame clarity and source-cited follow-up ideas.",
+            "tiktok": "Lean into fast native trend language, comments-as-briefs, and looser creator delivery.",
+            "instagram": "Prioritize visual polish, saveable tips, carousels/Reels pairing, and profile trust.",
+            "x": "Pair short video with a text hook/thread that frames the insight before playback.",
+        }.get(row["platform"], "Adapt the winning premise to the platform's native pacing and audience expectations.")
+        lines.append(f"| {md_escape(row['platform'])} | {row['count']} | {row['avg_score']} | [{md_escape(row['best_title'])}]({row['best_url']}) | {md_escape(strategy)} |")
+    lines.append("")
     lines.append("## Transcript Insights")
     lines.append("")
     if transcripts:
@@ -345,12 +389,28 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("| 4 | 15-22s | reveal frame | show result | outcome phrase | source-inspired, not copied |")
     lines.append("| 5 | 22-30s | face/result frame | CTA | comment prompt | loop to next video |")
     lines.append("")
+    lines.append("## Thumbnail Concepts")
+    lines.append("")
+    for index, video in enumerate(top[:5], 1):
+        lines.append(f"- {index}. {thumbnail_concept(video, brand)} Source: {video.get('source_url')}")
+    lines.append("")
     lines.append("## Storyboard Prompts")
     lines.append("")
     lines.append(f"- Frame 1: vertical phone-video frame, immediate action in {brand.get('industry')}, clear tension, natural light, authentic brand setting.")
     lines.append(f"- Frame 2: close-up proof shot of {brand.get('offer')}, visible progress indicator, clean readable overlay.")
     lines.append(f"- Frame 3: human reaction or result reveal for {brand.get('audience')}, brand-safe and realistic.")
     lines.append("- Frame 4: final payoff frame with simple CTA, designed for Shorts/Reels/TikTok pacing.")
+    lines.append("")
+    lines.append("## Optional Image Generation Workflow")
+    lines.append("")
+    lines.append("- Use the storyboard prompts as source-cited direction for image generation only after the script and claims are approved.")
+    lines.append("- Generate storyboard frames, not copies of source creators, source footage, logos, private people, or distinctive sets.")
+    lines.append("- Keep each generated frame tied to the brand setting, offer, audience, and proof points.")
+    lines.append("")
+    lines.append("## Signal Library Next Step")
+    lines.append("")
+    lines.append("- Save these signals into the reusable library with `signal_library.py add --signals signals.json --top-only`.")
+    lines.append("- Search prior signals before making a new calendar so strong patterns compound across future campaigns.")
     lines.append("")
     lines.append("## 30-Day Content Calendar")
     lines.append("")

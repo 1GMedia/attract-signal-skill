@@ -10,9 +10,13 @@
   ],
   "scripts": [
     "skills/media/attract-signal/scripts/scan_shorts.py",
+    "skills/media/attract-signal/scripts/import_platform.py",
     "skills/media/attract-signal/scripts/analyze_signals.py",
     "skills/media/attract-signal/scripts/generate_report.py",
-    "skills/media/attract-signal/scripts/fetch_transcript.py"
+    "skills/media/attract-signal/scripts/fetch_transcript.py",
+    "skills/media/attract-signal/scripts/publish_doc.py",
+    "skills/media/attract-signal/scripts/export_calendar_sheets.py",
+    "skills/media/attract-signal/scripts/signal_library.py"
   ],
   "optional": [
     "gogcli"

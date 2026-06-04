@@ -11,12 +11,17 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 ## What It Does
 
 - Scans one or more YouTube channel Shorts tabs with `yt-dlp`.
+- Imports TikTok, Instagram Reels, X video, or other short-form exports from CSV/JSON.
 - Filters winners by likes, defaulting to `10,000+`.
 - Collects views, likes, comments, source URLs, thumbnails, baselines, normalized engagement, relative performance, and signal scores.
+- Compares signal strength across platforms when normalized exports are provided.
 - Supports `--cookies-from-browser` / `--cookies` for YouTube sign-in or bot checks.
 - Produces JSON, Markdown, and CSV strategy artifacts.
 - Guides the agent to fetch transcripts, analyze hooks and visual hooks, and turn content signals into original brand-safe strategy concepts for any industry.
+- Generates thumbnail concepts, storyboard prompts, image-generation direction, and source-cited script/shot-list templates.
+- Maintains an optional local signal library for reusable pattern memory.
 - Supports optional Google Docs delivery through `gogcli`.
+- Supports optional Google Sheets calendar export through `gogcli`.
 
 ## Requirements
 
@@ -79,6 +84,26 @@ python3 skills/media/attract-signal/scripts/analyze_signals.py \
   ./channel-1.json ./channel-2.json \
   --out ./signals.json \
   --top 25
+```
+
+## Import TikTok, Instagram, Or X Exports
+
+Direct platform scraping is intentionally not bundled yet. For TikTok, Instagram Reels, and X video, export metrics to CSV/JSON and normalize them:
+
+```bash
+python3 skills/media/attract-signal/scripts/import_platform.py \
+  --platform mixed \
+  --input examples/platform-export.example.csv \
+  --source-name "Example multi-platform export" \
+  --out ./platform-normalized.json
+```
+
+Then include the normalized JSON with YouTube scans:
+
+```bash
+python3 skills/media/attract-signal/scripts/analyze_signals.py \
+  ./youtube-channel.json ./platform-normalized.json \
+  --out ./signals.json
 ```
 
 ## Generate A Strategy Report
@@ -153,7 +178,44 @@ The skill intentionally tells the agent to cite every source Short and to avoid 
 The skill can publish a finished Markdown report with `gogcli` after user approval:
 
 ```bash
-gog docs create "YouTube Shorts Trend Brief - Channel Name" --file brief.md --json
+python3 skills/media/attract-signal/scripts/publish_doc.py \
+  --file ./attract-signal-report.md \
+  --title "Attract Signal Brief - Brand Name"
+```
+
+Export a generated content calendar to Google Sheets after approval:
+
+```bash
+python3 skills/media/attract-signal/scripts/export_calendar_sheets.py \
+  --calendar ./content-calendar.csv \
+  --title "Attract Signal Calendar - Brand Name"
+```
+
+Build a reusable local signal library:
+
+```bash
+python3 skills/media/attract-signal/scripts/signal_library.py add --signals ./signals.json --top-only
+python3 skills/media/attract-signal/scripts/signal_library.py search "challenge"
 ```
 
 Writes/shares should always be approved by the user first.
+
+## Sample Report Sections
+
+Generated reports include:
+
+- Executive Summary
+- Top Signals
+- Source Evidence
+- Hook Taxonomy
+- Visual Pattern Taxonomy
+- Platform Comparison
+- Transcript Insights
+- Brand Strategy Opportunities
+- Script Drafts
+- Shot Lists
+- Thumbnail Concepts
+- Storyboard Prompts
+- Optional Image Generation Workflow
+- Signal Library Next Step
+- 30-Day Content Calendar
