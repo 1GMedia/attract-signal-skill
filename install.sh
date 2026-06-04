@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC="$ROOT_DIR/skills/media/youtube-shorts-trend-recraft"
-DEST="${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft"
+SRC="$ROOT_DIR/skills/media/attract-signal"
+DEST="${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal"
 
 if [[ ! -f "$SRC/SKILL.md" ]]; then
   echo "Missing skill source: $SRC/SKILL.md" >&2
@@ -20,7 +20,7 @@ if [[ -e "$DEST" ]]; then
 fi
 cp -R "$SRC" "$DEST"
 
-echo "Installed youtube-shorts-trend-recraft to:"
+echo "Installed attract-signal to:"
 echo "$DEST"
 echo
 echo "Recommended dependencies:"

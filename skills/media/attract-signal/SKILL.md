@@ -1,6 +1,6 @@
 ---
-name: youtube-shorts-trend-recraft
-description: "Use when scanning a YouTube channel's Shorts for high-performing videos, extracting transcripts/metadata/citations, breaking down trend type, hooks, visual hooks, and turning patterns into original brand-specific scripts, shot lists, storyboards, or Google Docs."
+name: attract-signal
+description: "Use when scanning YouTube Shorts or short-form channels for content signals: high-performing videos, transcript/metadata citations, trend types, hooks, visual hooks, repeatable formats, and brand-specific content strategy briefs, scripts, shot lists, storyboards, or Google Docs."
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -13,11 +13,11 @@ metadata:
     related_skills: [youtube-content, gogcli, google-workspace]
 ---
 
-# YouTube Shorts Trend Recraft
+# Attract Signal
 
 ## Overview
 
-This skill turns a YouTube channel's Shorts tab into a reusable content-intelligence brief. It is designed for competitive/trend research where the user wants to find high-performing Shorts, understand why they worked, and recraft the underlying pattern for their own brand without copying the original.
+This skill turns a YouTube channel's Shorts tab into a reusable content-intelligence brief. It is designed for competitive/trend research where the user wants to find high-performing Shorts, understand why they worked, and translate the underlying signal into original brand strategy without copying the original.
 
 Default example channel for testing:
 
@@ -34,8 +34,8 @@ Use this skill when the user asks to:
 - Scan a YouTube channel's Shorts for winners.
 - Filter Shorts by likes/views/engagement.
 - Analyze hooks, visual hooks, formats, content trends, and transcript patterns.
-- Create a trend breakdown that can become original scripts, shot lists, Google Docs, or storyboards.
-- Build a content swipe file with source video citations.
+- Create a signal and trend breakdown that can become original scripts, shot lists, Google Docs, or storyboards.
+- Build a source-cited content signal library.
 
 Don't use this for long-form YouTube summaries only; use `youtube-content` directly for single-video transcript transforms.
 
@@ -84,7 +84,7 @@ Only ask a question if the channel, brand niche, or output target materially cha
 Use the helper script in this skill:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft/scripts/scan_shorts.py \
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 50 \
@@ -95,7 +95,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft/
 If YouTube returns `Sign in to confirm you’re not a bot`, rerun with one of:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft/scripts/scan_shorts.py \
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 50 \
@@ -103,7 +103,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft/
   --out ~/youtube-shorts-research/clean-girl-shorts.json \
   --markdown ~/youtube-shorts-research/clean-girl-shorts.md
 
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft/scripts/scan_shorts.py \
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 50 \
@@ -124,7 +124,7 @@ The script uses `yt-dlp` to read channel Shorts and per-video metadata. YouTube 
 For each source URL selected by the scanner, use this skill's bundled transcript script:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/youtube-shorts-trend-recraft/scripts/fetch_transcript.py "SHORTS_URL" --timestamps
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/fetch_transcript.py "SHORTS_URL" --timestamps
 ```
 
 If this skill is installed without the bundled script for some reason, use the `youtube-content` skill's transcript script as a fallback.
@@ -183,7 +183,7 @@ Choose one or more:
 - Text overlay: <exact or summarized overlay>
 - Pattern interrupt: <unexpected object, speed ramp, close-up, sound sync>
 
-### Recraftable Pattern
+### Signal Pattern
 - Core mechanic: <repeatable content formula>
 - Why it likely worked: <viewer psychology>
 - Original-brand angle: <how to adapt without copying>
@@ -198,7 +198,7 @@ After individual analyses, make a channel/trend brief:
 # YouTube Shorts Trend Brief: <channel>
 
 ## Top Winners
-| Rank | Source | Views | Likes | Trend type | Hook type | Recraft angle |
+| Rank | Source | Views | Likes | Trend type | Hook type | Strategy angle |
 |---|---:|---:|---|---|---|---|
 
 ## Repeating Patterns
@@ -281,6 +281,6 @@ If `gog` is unavailable, use `google-workspace`'s `GAPI docs create` / `GAPI doc
 - [ ] Every analyzed Short includes a source link citation.
 - [ ] Likes/views/comments are either real metadata or explicitly marked unknown.
 - [ ] Transcript status is recorded for every video.
-- [ ] Individual breakdowns include trend type, hook, visual hooks, and recraftable pattern.
+- [ ] Individual breakdowns include trend type, hook, visual hooks, and signal pattern.
 - [ ] Channel-level synthesis produces original brand angles, not copied scripts.
 - [ ] Any Google Doc write was approved and the returned Doc URL/ID was verified.

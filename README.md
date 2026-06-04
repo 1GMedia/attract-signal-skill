@@ -1,6 +1,6 @@
-# YouTube Shorts Trend Recraft Skill
+# Attract Signal Skill
 
-A shareable Hermes/Codex skill for scanning a YouTube channel's Shorts, finding high-performing videos, citing source links, fetching transcripts, and turning repeatable patterns into original scripts, shot lists, and storyboard prompts.
+A shareable Hermes/Codex skill for finding the meaningful signal inside short-form content: high-performing YouTube Shorts, repeatable hooks, visual mechanics, audience-response patterns, source citations, and content strategy angles that can become original scripts, shot lists, and storyboard prompts.
 
 Default example channel:
 
@@ -15,7 +15,7 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 - Collects views, likes, comments, source URLs, thumbnails, and basic metadata.
 - Supports `--cookies-from-browser` / `--cookies` for YouTube sign-in or bot checks.
 - Produces JSON and Markdown scan artifacts.
-- Guides the agent to fetch transcripts, analyze hooks and visual hooks, and recraft original brand-safe concepts.
+- Guides the agent to fetch transcripts, analyze hooks and visual hooks, and turn content signals into original brand-safe strategy concepts.
 - Supports optional Google Docs delivery through `gogcli`.
 
 ## Requirements
@@ -42,19 +42,19 @@ From this repository:
 That copies:
 
 ```text
-skills/media/youtube-shorts-trend-recraft
+skills/media/attract-signal
 ```
 
 to:
 
 ```text
-~/.hermes/skills/media/youtube-shorts-trend-recraft
+~/.hermes/skills/media/attract-signal
 ```
 
 ## Run The Scanner Directly
 
 ```bash
-python3 skills/media/youtube-shorts-trend-recraft/scripts/scan_shorts.py \
+python3 skills/media/attract-signal/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 20 \
@@ -75,7 +75,7 @@ If YouTube blocks metadata with a sign-in or bot check, use one of:
 After installation, ask Hermes/Codex:
 
 ```text
-Use youtube-shorts-trend-recraft to scan this channel's Shorts, find videos over 10,000 likes, analyze the trend type, hook, visual hooks, transcript structure, and recraft original video concepts for my brand with source citations.
+Use attract-signal to scan this channel's Shorts, find videos over 10,000 likes, analyze the trend type, hook, visual hooks, transcript structure, and turn the strongest content signals into an original strategy, scripts, and shot list for my brand with source citations.
 ```
 
 The skill intentionally tells the agent to cite every source Short and to avoid copying exact scripts, premises, edits, or creator footage.
@@ -89,4 +89,3 @@ gog docs create "YouTube Shorts Trend Brief - Channel Name" --file brief.md --js
 ```
 
 Writes/shares should always be approved by the user first.
-
