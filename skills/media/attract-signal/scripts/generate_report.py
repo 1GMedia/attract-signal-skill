@@ -333,6 +333,8 @@ def infer_avatar(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
     blob = " ".join(video_text(video) for video in top)
     if has_word(blob, ("claude", "codex", "openclaw", "agent", "agents", "obsidian", "mcp", "workflow", "workflows")):
         return "AI builders, creators, and operators looking for practical tool workflows"
+    if has_word(blob, ("comedy", "comedian", "roast", "roasts", "kill", "tony", "hilarious", "impersonation")):
+        return "comedy fans and open mic comics looking for punchy premises, tension, and tags"
     if has_word(blob, ("startup", "founder", "founders", "saas", "company", "yc", "apply")):
         return "founders, operators, and startup-curious builders"
     if has_phrase(blob, ("ball pit",)) or has_word(blob, ("clean", "cleaned", "dirty", "drain", "sink", "mess")):
@@ -357,6 +359,8 @@ def infer_promise(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: Li
     blob = " ".join(video_text(video) for video in top)
     if has_word(blob, ("claude", "codex", "openclaw", "agent", "agents", "obsidian", "mcp", "workflow", "workflows")):
         return "Make AI tools feel practical, repeatable, and useful now."
+    if has_word(blob, ("comedy", "comedian", "roast", "roasts", "kill", "tony", "hilarious", "impersonation")):
+        return "Turn live tension into quick laughs, tags, and memorable stage moments."
     if has_word(blob, ("startup", "ai", "saas", "company", "apply")):
         return "Make big startup shifts feel legible, urgent, and actionable."
     if has_word(blob, ("dirty", "clean", "cleaned", "drain", "sink", "mess")):
@@ -368,6 +372,8 @@ def infer_promise(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: Li
 
 def infer_meat_type(video: Dict[str, Any]) -> str:
     text = video_text(video)
+    if has_word(text, ("comedy", "comedian", "roast", "roasts", "hilarious", "impersonation")) or has_phrase(text, ("kill tony",)):
+        return "Story"
     if has_word(text, ("startup", "founder", "founders", "saas", "ai", "school", "lesson")):
         return "Education"
     if has_phrase(text, ("ball pit",)) or has_word(text, ("clean", "cleaned", "dirty", "drain", "sink", "demo", "test", "using", "tool")):
@@ -500,6 +506,8 @@ def channel_topic(spine: Dict[str, Any]) -> str:
     text = f"{spine.get('avatar', '')} {spine.get('promise', '')}".lower()
     if any(token in text for token in ("claude", "codex", "agent", "workflow", "workflows", "tools", "ai tools")):
         return "ai_tools"
+    if any(token in text for token in ("comedy", "comic", "joke", "laugh", "stage", "roast", "open mic")):
+        return "comedy"
     if any(token in text for token in ("startup", "founder", "saas", "ai", "funding")):
         return "startup"
     if any(token in text for token in ("mess", "clean", "cleanup", "dirty", "drain")):
@@ -555,6 +563,15 @@ def filled_hooks_for_template(template: str, spine: Dict[str, Any], tag: str) ->
             "Challenge": ["Can I clean this before the baby wakes up?", "Can I finish this room before the timer ends?"],
             "Narrative": ["I found something disgusting in a normal sink.", "This looked clean until I checked closer."],
             "Social Proof": ["Watch my family react to what came out of this drain.", "The owner did not think this would work."],
+        }
+    elif topic == "comedy":
+        examples = {
+            "Curiosity": ["What do you do that already sounds like a setup?", "Why does every open mic have this exact guy?"],
+            "Spectacle": ["This crowd-work answer got weird instantly.", "One normal question turned into a full roast."],
+            "Transformation": ["I turned one awkward answer into three tags.", "This boring fact became the whole bit."],
+            "Challenge": ["Can I get a laugh from the worst job answer?", "Can I write five tags off one audience detail?"],
+            "Narrative": ["He said one normal sentence and lost the room.", "This started like small talk and became a punchline."],
+            "Social Proof": ["Watch the room react when the tag lands.", "The panel did not expect that second punchline."],
         }
     elif topic == "ai_tools":
         examples = {
@@ -643,6 +660,7 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
             "cleaning": "the next gross cleaning test",
             "startup": "the next founder breakdown",
             "ai_tools": "the next AI workflow test",
+            "comedy": "the next joke test",
             "product": "the next real product test",
             "gaming": "the next challenge run",
         }.get(topic, "the next test")
