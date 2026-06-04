@@ -69,19 +69,40 @@ The default report workflow writes a local Markdown file first, then creates a G
 
 ## Workflow
 
-### 1. Confirm scan inputs only if missing
+### 1. Confirm source and target inputs
 
-Default values:
+Ask for these inputs when they are missing:
+
+```text
+Source inspiration links:
+- YouTube Shorts channel URL
+- Instagram/Reels profile URL
+- TikTok profile URL
+- X/video profile URL
+
+Target brand links:
+- brand website URL
+- product page URL
+- Instagram/TikTok/YouTube accounts if available
+```
+
+The shortest acceptable prompt is:
+
+```text
+Share a source YouTube/Instagram/TikTok/X channel to analyze, plus your brand website or product URL if you want a strategy for your own brand.
+```
+
+Default scan values:
 
 ```text
 channel_shorts_url = https://www.youtube.com/@_The_Clean_Girl/shorts
 min_likes = 10000
 max_videos = 50
 sort = channel/default order unless user says newest/popular
-brand_context = optional; if missing, use industry-neutral placeholders
+target_brand_url = optional, but required for product-mode claims unless brand.yaml supplies verified product details
 ```
 
-Only ask a question if the channel, brand niche, or output target materially changes the work. Otherwise run the default.
+If the user provides only a source channel, generate a generic/creator-style signal report. If the user provides a brand website or product page, open/research it first, then populate `brand.yaml` fields from verified page text. Never infer product names, offers, discount codes, ingredients, safety claims, or prices without a provided/verified source URL.
 
 ### 2. Collect Shorts metadata
 

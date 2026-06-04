@@ -186,6 +186,10 @@ forbidden_claims:
 After installation, ask Hermes/Codex:
 
 ```text
+Use attract-signal. Source inspiration: https://www.youtube.com/@_The_Clean_Girl/shorts. Target brand: https://kobeesco.com/. Build a 14-day product-led sprint with source citations.
+```
+
+```text
 Use attract-signal to scan this channel's Shorts, find videos over 10,000 likes, analyze the trend type, hook, visual hooks, transcript structure, and turn the strongest content signals into an original strategy, scripts, and shot list for my brand with source citations.
 ```
 
@@ -198,6 +202,13 @@ Use attract-signal for a skincare brand, a restaurant, or a SaaS founder. Keep t
 ```
 
 The skill intentionally tells the agent to cite every source Short and to avoid copying exact scripts, premises, edits, or creator footage.
+
+Input contract:
+
+- Source inspiration can be a YouTube Shorts channel, Instagram/Reels profile, TikTok profile, X video profile, or exported platform CSV/JSON.
+- Target brand context can be a website URL, product page URL, or `brand.yaml`.
+- If the target is a Shopify/product brand, verify the product page before naming the product, using claims, or writing CTAs.
+- If no target brand URL/config is provided, keep the report creator-style and generic rather than inventing a product.
 
 ## Google Docs Output
 
