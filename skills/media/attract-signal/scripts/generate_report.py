@@ -6,6 +6,9 @@ import argparse
 import csv
 import json
 import re
+import shutil
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -239,6 +242,50 @@ def write_calendar(path: Path, rows: List[Dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
+def run_json(cmd: List[str]) -> Dict[str, Any]:
+    proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        raise RuntimeError(f"Command failed ({proc.returncode}): {' '.join(cmd)}\n{proc.stderr.strip()}")
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Expected JSON from {' '.join(cmd)}, got:\n{proc.stdout}") from exc
+
+
+def default_doc_title(brand: Dict[str, Any], report_path: Path) -> str:
+    brand_name = brand.get("brand_name")
+    if brand_name and brand_name != DEFAULT_BRAND["brand_name"]:
+        return f"Attract Signal Brief - {brand_name}"
+    return f"Attract Signal Brief - {report_path.stem.replace('-', ' ').replace('_', ' ').title()}"
+
+
+def publish_google_doc(report_path: Path, title: str, parent: Optional[str] = None, pageless: bool = True) -> Dict[str, Any]:
+    if shutil.which("gog") is None:
+        raise RuntimeError("gogcli is required. Install with: brew install openclaw/tap/gogcli")
+    cmd = ["gog", "docs", "create", title, "--file", str(report_path), "--json"]
+    if pageless:
+        cmd.append("--pageless")
+    if parent:
+        cmd.extend(["--parent", parent])
+    created = run_json(cmd)
+    doc_id = (created.get("file") or {}).get("id") or created.get("id")
+    if not doc_id:
+        raise RuntimeError("Google Doc was created but no document ID was returned")
+    verified = run_json(["gog", "drive", "get", doc_id, "--json"])
+    result = {"created": created, "verified": verified}
+    metadata_path = report_path.with_suffix(".google-doc.json")
+    metadata_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
+def open_google_doc(publish_result: Dict[str, Any]) -> None:
+    created_file = (publish_result.get("created") or {}).get("file") or {}
+    verified_file = publish_result.get("verified") or {}
+    url = created_file.get("webViewLink") or verified_file.get("webViewLink")
+    if url and shutil.which("open"):
+        subprocess.run(["open", url], check=False)
+
+
 def load_transcripts(transcripts_dir: Optional[Path]) -> Dict[str, Dict[str, Any]]:
     if not transcripts_dir:
         return {}
@@ -466,6 +513,12 @@ def main() -> int:
     parser.add_argument("--calendar", type=Path, default=None, help="Optional CSV 30-day calendar output")
     parser.add_argument("--transcripts-dir", type=Path, default=None, help="Optional directory containing transcript JSON files named <video_id>.json")
     parser.add_argument("--top", type=int, default=10, help="Number of top signals to include")
+    parser.add_argument("--no-google-doc", action="store_true", help="Only write local files; skip the default Google Doc copy")
+    parser.add_argument("--doc-title", default=None, help="Google Doc title. Defaults to 'Attract Signal Brief - <brand/report>'.")
+    parser.add_argument("--doc-parent", default=None, help="Optional Google Drive folder ID for the generated Doc")
+    parser.add_argument("--no-pageless", action="store_true", help="Create the Google Doc with normal pages instead of pageless mode")
+    parser.add_argument("--open-doc", action="store_true", help="Open the created Google Doc in the default browser")
+    parser.add_argument("--require-google-doc", action="store_true", help="Fail if the default Google Doc publishing step fails")
     args = parser.parse_args()
 
     signals = load_json(args.signals)
@@ -479,6 +532,29 @@ def main() -> int:
         measured_ranked = [item for item in ranked if has_performance_metrics(item)]
         top = (measured_ranked or ranked)[: args.top]
         write_calendar(args.calendar, build_calendar_rows(top, brand, 30))
+    result: Dict[str, Any] = {
+        "markdown": str(args.out),
+        "calendar": str(args.calendar) if args.calendar else None,
+        "google_doc": None,
+    }
+    if not args.no_google_doc:
+        try:
+            publish_result = publish_google_doc(
+                args.out,
+                args.doc_title or default_doc_title(brand, args.out),
+                parent=args.doc_parent,
+                pageless=not args.no_pageless,
+            )
+            result["google_doc"] = publish_result
+            if args.open_doc:
+                open_google_doc(publish_result)
+        except Exception as exc:
+            message = f"WARNING: local report was generated, but Google Doc publishing failed: {exc}"
+            if args.require_google_doc:
+                raise RuntimeError(message) from exc
+            result["google_doc_error"] = str(exc)
+            print(message, file=sys.stderr)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 

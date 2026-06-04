@@ -44,7 +44,7 @@ Don't use this for long-form YouTube summaries only; use `youtube-content` direc
 
 - Bundled `scripts/fetch_transcript.py` — fetches transcripts from individual Shorts or videos.
 - `youtube-content` — optional fallback transcript skill if already installed.
-- `gogcli` — preferred Google CLI for later writing briefs/scripts into Google Docs (`brew install openclaw/tap/gogcli`).
+- `gogcli` — preferred Google CLI for writing the default Google Docs copy (`brew install openclaw/tap/gogcli`).
 - `google-workspace` — existing Hermes Google Workspace fallback if `gog`/`gogcli` is not installed or not authenticated.
 - `image_generate` tool — use later to generate storyboard frames after the script/shot list is approved.
 
@@ -56,7 +56,7 @@ Install metadata/transcript dependencies if missing:
 python3 -m pip install -U yt-dlp youtube-transcript-api
 ```
 
-Optional Google Docs backend for delivery:
+Default Google Docs backend for delivery:
 
 ```bash
 brew install openclaw/tap/gogcli
@@ -64,6 +64,8 @@ gog --version
 ```
 
 If Homebrew is unavailable, use the `google-workspace` skill or Docker install path from the `gogcli` skill.
+
+The default report workflow writes a local Markdown file first, then creates a Google Doc copy with `gog docs create --file`. If `gog` is missing or unauthenticated, keep the local Markdown and tell the user exactly what failed. Use `--no-google-doc` only for local-only tests or CI.
 
 ## Workflow
 
@@ -176,6 +178,11 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/genera
   --calendar content-calendar.csv
 ```
 
+This creates both:
+
+- `attract-signal-report.md` locally
+- a native Google Doc copy, with metadata saved as `attract-signal-report.google-doc.json`
+
 For brand-specific strategy, pass a simple `brand.yaml`:
 
 ```yaml
@@ -202,7 +209,14 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/genera
   --brand brand.yaml \
   --transcripts-dir transcripts \
   --out attract-signal-report.md \
-  --calendar content-calendar.csv
+  --calendar content-calendar.csv \
+  --doc-title "Attract Signal Brief - <Brand>"
+```
+
+For local-only testing, add:
+
+```bash
+--no-google-doc
 ```
 
 Transcript files should be named `<video_id>.json` and generated with:
@@ -312,11 +326,23 @@ For each key frame:
 - Source reference link(s)
 ```
 
-### 8. Default delivery: write to Google Docs
+### 8. Default delivery: local Markdown plus Google Doc
 
-For now, the expected final deliverable is a **Google Doc** containing the trend brief, citations, scripts, shot lists, and storyboard prompts. Draft locally first as Markdown, then publish the Markdown to Google Docs with `gogcli` after Google auth is working and the user has approved the write.
+The expected final deliverable is both a **local Markdown file** and a **Google Doc copy** containing the trend brief, citations, scripts, shot lists, and storyboard prompts. Draft locally first as Markdown; the report generator now publishes that Markdown to Google Docs by default when `gogcli` is installed and authenticated.
 
-Preferred publishing helper:
+Preferred report-and-publish helper:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/generate_report.py \
+  --signals signals.json \
+  --brand brand.yaml \
+  --transcripts-dir transcripts \
+  --out attract-signal-report.md \
+  --calendar content-calendar.csv \
+  --doc-title "Attract Signal Brief - <Brand or Channel>"
+```
+
+Use `--open-doc` when the user explicitly wants the generated Doc opened in the browser. The standalone publisher remains available for already-generated Markdown:
 
 ```bash
 python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/publish_doc.py \
@@ -340,7 +366,7 @@ gog docs write <docId> --append --file brief.md --json
 gog drive get <docId> --json --select id,name,mimeType,webViewLink,owners
 ```
 
-If `gog` is unavailable, use `google-workspace`'s `GAPI docs create` / `GAPI docs append` flow. Never create, edit, or share Google Docs without user approval. If Google auth is not set up, stop after the local Markdown artifact and tell the user exactly what OAuth/install step is missing.
+If `gog` is unavailable, keep the local Markdown artifact and tell the user exactly what OAuth/install step is missing; use `google-workspace`'s `GAPI docs create` / `GAPI docs append` flow only when explicitly requested. Never share, permission-change, or overwrite Google Docs without user approval.
 
 ### 9. Google Sheets calendar export
 
@@ -377,7 +403,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal
 3. **Metadata-only extraction can hit format errors.** The scanner uses `--ignore-no-formats-error` for per-video JSON so unavailable video formats do not block metadata collection.
 4. **Transcripts often fail for Shorts.** Use available captions only; otherwise describe visual/audio structure from metadata or browser observation and label transcript as unavailable.
 5. **Confusing inspiration with copying.** Always translate source patterns into new concepts and cite references.
-6. **Creating Google Docs too early.** Draft locally first; ask for approval before using `gog docs create/write` or `google-workspace` writes.
+6. **Skipping the local artifact.** Always write the local Markdown first; the Google Doc is a copy of that source file.
 
 ## Verification Checklist
 
@@ -393,4 +419,6 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal
 - [ ] Thumbnail concepts and storyboard/image-generation prompts avoid copying source creators.
 - [ ] Non-YouTube platform data came from user-provided exports and is labeled by platform.
 - [ ] Reusable signal library updates are local unless the user explicitly asks to share/export them.
-- [ ] Any Google Doc write was approved and the returned Doc URL/ID was verified.
+- [ ] The local Markdown exists.
+- [ ] The default Google Doc copy was created when `gog` auth was available, or the missing auth/install step was clearly reported.
+- [ ] The returned Doc URL/ID was verified.

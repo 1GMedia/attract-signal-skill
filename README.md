@@ -16,11 +16,11 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 - Collects views, likes, comments, source URLs, thumbnails, baselines, normalized engagement, relative performance, and signal scores.
 - Compares signal strength across platforms when normalized exports are provided.
 - Supports `--cookies-from-browser` / `--cookies` for YouTube sign-in or bot checks.
-- Produces JSON, Markdown, and CSV strategy artifacts.
+- Produces JSON, local Markdown, Google Doc, and CSV strategy artifacts.
 - Guides the agent to fetch transcripts, analyze hooks and visual hooks, and turn content signals into original brand-safe strategy concepts for any industry.
 - Generates thumbnail concepts, storyboard prompts, image-generation direction, and source-cited script/shot-list templates.
 - Maintains an optional local signal library for reusable pattern memory.
-- Supports optional Google Docs delivery through `gogcli`.
+- Creates a Google Docs copy by default through `gogcli` after the local Markdown report is written.
 - Supports optional Google Sheets calendar export through `gogcli`.
 
 ## Requirements
@@ -29,12 +29,14 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 python3 -m pip install -U yt-dlp youtube-transcript-api
 ```
 
-Optional Google Docs publishing:
+Default Google Docs publishing:
 
 ```bash
 brew install openclaw/tap/gogcli
 gog auth status
 ```
+
+If `gog` is not installed or authenticated, report generation still writes the local Markdown/CSV files and prints the Google publishing error. Use `--require-google-doc` when you want that publishing step to fail the run.
 
 ## Install The Skill
 
@@ -118,6 +120,8 @@ python3 skills/media/attract-signal/scripts/generate_report.py \
   --calendar ./content-calendar.csv
 ```
 
+This writes `./attract-signal-report.md`, creates a Google Doc copy by default, and writes Google Doc metadata beside the report as `./attract-signal-report.google-doc.json`.
+
 Brand-specific report:
 
 ```bash
@@ -126,7 +130,20 @@ python3 skills/media/attract-signal/scripts/generate_report.py \
   --brand examples/brand.example.yaml \
   --transcripts-dir ./transcripts \
   --out ./attract-signal-report.md \
-  --calendar ./content-calendar.csv
+  --calendar ./content-calendar.csv \
+  --doc-title "Attract Signal Brief - Example Brand"
+```
+
+For a local-only run:
+
+```bash
+python3 skills/media/attract-signal/scripts/generate_report.py \
+  --signals ./signals.json \
+  --brand examples/brand.example.yaml \
+  --transcripts-dir ./transcripts \
+  --out ./attract-signal-report.md \
+  --calendar ./content-calendar.csv \
+  --no-google-doc
 ```
 
 Transcript files should be JSON files from `fetch_transcript.py`, named by video ID:
@@ -175,7 +192,24 @@ The skill intentionally tells the agent to cite every source Short and to avoid 
 
 ## Google Docs Output
 
-The skill can publish a finished Markdown report with `gogcli` after user approval:
+Report generation now creates both outputs by default:
+
+1. Local Markdown report at the `--out` path.
+2. Native Google Doc copy through `gog docs create --file`.
+
+Control the Google Doc from `generate_report.py`:
+
+```bash
+python3 skills/media/attract-signal/scripts/generate_report.py \
+  --signals ./signals.json \
+  --brand examples/brand.example.yaml \
+  --out ./attract-signal-report.md \
+  --calendar ./content-calendar.csv \
+  --doc-title "Attract Signal Brief - Brand Name" \
+  --open-doc
+```
+
+The standalone publisher remains available when you already have a Markdown file:
 
 ```bash
 python3 skills/media/attract-signal/scripts/publish_doc.py \
@@ -198,7 +232,7 @@ python3 skills/media/attract-signal/scripts/signal_library.py add --signals ./si
 python3 skills/media/attract-signal/scripts/signal_library.py search "challenge"
 ```
 
-Writes/shares should always be approved by the user first.
+Creating the default Doc is part of the report workflow. Any sharing, permission changes, or edits to existing Docs should still be approved by the user first.
 
 ## Sample Report Sections
 
