@@ -8,6 +8,12 @@
     "yt-dlp",
     "youtube-transcript-api"
   ],
+  "scripts": [
+    "skills/media/attract-signal/scripts/scan_shorts.py",
+    "skills/media/attract-signal/scripts/analyze_signals.py",
+    "skills/media/attract-signal/scripts/generate_report.py",
+    "skills/media/attract-signal/scripts/fetch_transcript.py"
+  ],
   "optional": [
     "gogcli"
   ]

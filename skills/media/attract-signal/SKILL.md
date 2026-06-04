@@ -17,7 +17,7 @@ metadata:
 
 ## Overview
 
-This skill turns a YouTube channel's Shorts tab into a reusable content-intelligence brief. It is designed for competitive/trend research where the user wants to find high-performing Shorts, understand why they worked, and translate the underlying signal into original brand strategy without copying the original.
+This skill turns YouTube Shorts channels into reusable content-intelligence briefs. It is designed for competitive/trend research where the user wants to find high-performing Shorts, understand why they worked, and translate the underlying signal into original brand strategy without copying the original. It is industry-agnostic by default: do not assume tattoo, beauty, SaaS, local services, restaurants, ecommerce, coaching, fitness, or any other niche unless the user provides that context.
 
 Default example channel for testing:
 
@@ -31,11 +31,12 @@ The standard threshold is **10,000+ likes**, but the user can change it. Always 
 
 Use this skill when the user asks to:
 
-- Scan a YouTube channel's Shorts for winners.
+- Scan one or more YouTube channels' Shorts for winners.
 - Filter Shorts by likes/views/engagement.
 - Analyze hooks, visual hooks, formats, content trends, and transcript patterns.
 - Create a signal and trend breakdown that can become original scripts, shot lists, Google Docs, or storyboards.
 - Build a source-cited content signal library.
+- Create an industry-agnostic or brand-specific 30-day content strategy.
 
 Don't use this for long-form YouTube summaries only; use `youtube-content` directly for single-video transcript transforms.
 
@@ -75,6 +76,7 @@ channel_shorts_url = https://www.youtube.com/@_The_Clean_Girl/shorts
 min_likes = 10000
 max_videos = 50
 sort = channel/default order unless user says newest/popular
+brand_context = optional; if missing, use industry-neutral placeholders
 ```
 
 Only ask a question if the channel, brand niche, or output target materially changes the work. Otherwise run the default.
@@ -112,7 +114,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_s
   --markdown ~/youtube-shorts-research/clean-girl-shorts.md
 ```
 
-The script uses `yt-dlp` to read channel Shorts and per-video metadata. YouTube may hide likes or throttle metadata; if `like_count` is missing for many videos, do one of:
+The script uses `yt-dlp` to read channel Shorts and per-video metadata. It also adds channel baseline stats, normalized engagement, relative performance, `signal_score`, and `signal_reason`. YouTube may hide likes or throttle metadata; if `like_count` is missing for many videos, do one of:
 
 1. Retry with fewer videos (`--max-videos 20`).
 2. Retry with `--cookies-from-browser chrome` or a Netscape cookie file if YouTube asks for sign-in/bot confirmation.
@@ -135,7 +137,67 @@ If transcript is unavailable:
 - Use title, description, visible captions, and audio/visual observation if the user provides video access.
 - Mark `transcript_status: unavailable` instead of inventing words.
 
-### 4. Analyze each winning Short
+### 4. Combine multi-channel signals when needed
+
+If the user gives multiple channels, run one scan per channel, then combine them:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/analyze_signals.py \
+  channel-1.json channel-2.json \
+  --out signals.json \
+  --top 25
+```
+
+The combined output ranks signals across channels with `cross_channel_signal_score` and preserves every `source_url`.
+
+### 5. Generate the strategy report
+
+For generic industry-agnostic strategy:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/generate_report.py \
+  --signals signals.json \
+  --transcripts-dir transcripts \
+  --out attract-signal-report.md \
+  --calendar content-calendar.csv
+```
+
+For brand-specific strategy, pass a simple `brand.yaml`:
+
+```yaml
+brand_name: Example Brand
+industry: local service business
+audience: busy homeowners who want trustworthy help
+offer: a clear, reliable service package
+tone: helpful, direct, practical, and warm
+proof_points:
+  - before-and-after results
+constraints:
+  - film with a phone
+filming_resources:
+  - owner on camera
+forbidden_claims:
+  - guaranteed results
+```
+
+Then run:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/generate_report.py \
+  --signals signals.json \
+  --brand brand.yaml \
+  --transcripts-dir transcripts \
+  --out attract-signal-report.md \
+  --calendar content-calendar.csv
+```
+
+Transcript files should be named `<video_id>.json` and generated with:
+
+```bash
+python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/fetch_transcript.py "SHORTS_URL" --timestamps > transcripts/VIDEO_ID.json
+```
+
+### 6. Analyze each winning Short
 
 For every Short above threshold, produce this breakdown:
 
@@ -190,7 +252,7 @@ Choose one or more:
 - Avoid copying: <what not to reuse verbatim>
 ```
 
-### 5. Synthesize channel-level trends
+### 7. Synthesize channel-level trends
 
 After individual analyses, make a channel/trend brief:
 
@@ -236,7 +298,7 @@ For each key frame:
 - Source reference link(s)
 ```
 
-### 6. Default delivery: write to Google Docs
+### 8. Default delivery: write to Google Docs
 
 For now, the expected final deliverable is a **Google Doc** containing the trend brief, citations, scripts, shot lists, and storyboard prompts. Draft locally first as Markdown, then publish the Markdown to Google Docs with `gogcli` after Google auth is working and the user has approved the write.
 
@@ -280,7 +342,10 @@ If `gog` is unavailable, use `google-workspace`'s `GAPI docs create` / `GAPI doc
 - [ ] Channel Shorts URL and threshold recorded.
 - [ ] Every analyzed Short includes a source link citation.
 - [ ] Likes/views/comments are either real metadata or explicitly marked unknown.
+- [ ] Baselines, normalized engagement, signal score, and signal reason are present when metadata allows.
 - [ ] Transcript status is recorded for every video.
 - [ ] Individual breakdowns include trend type, hook, visual hooks, and signal pattern.
 - [ ] Channel-level synthesis produces original brand angles, not copied scripts.
+- [ ] Reports stay industry-agnostic unless the user supplies brand context.
+- [ ] 30-day calendar rows include source links.
 - [ ] Any Google Doc write was approved and the returned Doc URL/ID was verified.

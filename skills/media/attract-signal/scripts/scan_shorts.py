@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
+from statistics import median
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -126,6 +128,126 @@ def compact_video(meta: Dict[str, Any], source_url: str) -> Dict[str, Any]:
     }
 
 
+def safe_ratio(numerator: Any, denominator: Any) -> Optional[float]:
+    if isinstance(numerator, int) and isinstance(denominator, int) and denominator > 0:
+        return numerator / denominator
+    return None
+
+
+def numeric_values(videos: List[Dict[str, Any]], key: str) -> List[int]:
+    return [v[key] for v in videos if isinstance(v.get(key), int)]
+
+
+def channel_baseline(videos: List[Dict[str, Any]]) -> Dict[str, Any]:
+    views = numeric_values(videos, "view_count")
+    likes = numeric_values(videos, "like_count")
+    comments = numeric_values(videos, "comment_count")
+    return {
+        "video_count": len(videos),
+        "median_views": int(median(views)) if views else None,
+        "median_likes": int(median(likes)) if likes else None,
+        "median_comments": int(median(comments)) if comments else None,
+        "max_views": max(views) if views else None,
+        "max_likes": max(likes) if likes else None,
+        "max_comments": max(comments) if comments else None,
+        "likes_available_count": len(likes),
+        "comments_available_count": len(comments),
+    }
+
+
+def recency_modifier(upload_date: Any, now: datetime) -> float:
+    if not upload_date:
+        return 0.9
+    try:
+        uploaded = datetime.strptime(str(upload_date), "%Y%m%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return 0.9
+    days_old = max((now - uploaded).days, 0)
+    if days_old <= 30:
+        return 1.1
+    if days_old <= 90:
+        return 1.0
+    if days_old <= 365:
+        return 0.9
+    return 0.75
+
+
+def metric_relative(value: Any, baseline: Any) -> Optional[float]:
+    if isinstance(value, int) and isinstance(baseline, int) and baseline > 0:
+        return value / baseline
+    return None
+
+
+def score_video(video: Dict[str, Any], baseline: Dict[str, Any], now: datetime) -> Dict[str, Any]:
+    views = video.get("view_count")
+    likes = video.get("like_count")
+    comments = video.get("comment_count")
+    like_view = safe_ratio(likes, views)
+    comment_view = safe_ratio(comments, views)
+    relative_views = metric_relative(views, baseline.get("median_views"))
+    relative_likes = metric_relative(likes, baseline.get("median_likes"))
+    relative_comments = metric_relative(comments, baseline.get("median_comments"))
+
+    absolute_score = 0.0
+    if isinstance(views, int):
+        absolute_score += min(18.0, math.log10(max(views, 1)) * 3.0)
+    if isinstance(likes, int):
+        absolute_score += min(12.0, math.log10(max(likes, 1)) * 2.5)
+    if isinstance(comments, int):
+        absolute_score += min(8.0, math.log10(max(comments, 1) + 1) * 2.5)
+
+    engagement_score = 0.0
+    if like_view is not None:
+        engagement_score += min(18.0, like_view * 650)
+    if comment_view is not None:
+        engagement_score += min(10.0, comment_view * 2500)
+
+    outlier_score = 0.0
+    if relative_views is not None:
+        outlier_score += min(14.0, relative_views * 4.0)
+    if relative_likes is not None:
+        outlier_score += min(10.0, relative_likes * 3.0)
+    if relative_comments is not None:
+        outlier_score += min(6.0, relative_comments * 2.0)
+
+    completeness_score = 0.0
+    for key in ("title", "source_url", "view_count", "like_count", "comment_count", "description", "thumbnail"):
+        if video.get(key) not in (None, "", []):
+            completeness_score += 1.0
+
+    raw = absolute_score + engagement_score + outlier_score + completeness_score
+    score = max(0, min(100, round(raw * recency_modifier(video.get("upload_date"), now))))
+    reasons = []
+    if relative_views is not None and relative_views >= 2:
+        reasons.append(f"{relative_views:.1f}x channel median views")
+    if relative_likes is not None and relative_likes >= 2:
+        reasons.append(f"{relative_likes:.1f}x channel median likes")
+    if like_view is not None:
+        reasons.append(f"{like_view * 100:.2f}% like/view ratio")
+    if comment_view is not None and comment_view > 0:
+        reasons.append(f"{comment_view * 100:.3f}% comment/view ratio")
+    if not reasons:
+        reasons.append("baseline metadata captured; signal depends on available metrics")
+
+    return {
+        "like_view_ratio": like_view,
+        "comment_view_ratio": comment_view,
+        "relative_views": relative_views,
+        "relative_likes": relative_likes,
+        "relative_comments": relative_comments,
+        "signal_score": score,
+        "signal_reason": "; ".join(reasons),
+    }
+
+
+def enrich_videos(videos: List[Dict[str, Any]]) -> Dict[str, Any]:
+    baseline = channel_baseline(videos)
+    now = datetime.now(timezone.utc)
+    for video in videos:
+        video.update(score_video(video, baseline, now))
+    return baseline
+
+
 def fmt_num(value: Any) -> str:
     if value is None:
         return "unknown"
@@ -193,6 +315,7 @@ def main() -> int:
         except Exception as exc:  # keep scanning even if one video fails
             errors.append({"url": url, "error": str(exc)})
 
+    baseline = enrich_videos(videos)
     winners = []
     for v in videos:
         likes = v.get("like_count")
@@ -200,7 +323,7 @@ def main() -> int:
             winners.append(v)
         elif likes is None and args.include_unknown_likes:
             winners.append(v)
-    winners.sort(key=lambda x: ((x.get("like_count") or -1), (x.get("view_count") or -1)), reverse=True)
+    winners.sort(key=lambda x: ((x.get("signal_score") or -1), (x.get("like_count") or -1), (x.get("view_count") or -1)), reverse=True)
 
     payload = {
         "channel_url": channel_url,
@@ -208,6 +331,8 @@ def main() -> int:
         "min_likes": args.min_likes,
         "max_videos": args.max_videos,
         "videos_scanned": len(videos),
+        "partial_scan": len(errors) > 0 or len(videos) < len(flat_entries[: args.max_videos]),
+        "channel_baseline": baseline,
         "winners": winners,
         "videos": videos,
         "errors": errors,

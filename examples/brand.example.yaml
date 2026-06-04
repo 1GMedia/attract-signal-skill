@@ -1,0 +1,20 @@
+brand_name: Example Brand
+industry: local service business
+audience: busy homeowners who want trustworthy help
+offer: a clear, reliable service package
+tone: helpful, direct, practical, and warm
+proof_points:
+  - before-and-after results
+  - customer reactions
+  - behind-the-scenes process
+constraints:
+  - film with a phone
+  - keep videos under 30 seconds
+filming_resources:
+  - owner on camera
+  - customer location
+  - product or service process
+forbidden_claims:
+  - guaranteed results
+  - unsupported medical or financial claims
+
