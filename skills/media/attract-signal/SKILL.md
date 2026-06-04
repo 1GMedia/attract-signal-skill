@@ -196,6 +196,8 @@ proof_points:
   - before-and-after results
 primary_path: sub
 channel_style: face_led
+product_mode: false
+product_name: ""
 constraints:
   - film with a phone
 filming_resources:
@@ -318,6 +320,10 @@ After individual analyses, make a channel/trend brief:
 ## Meats, Style, And CTA System
 - Primary meats:
 - Channel style adjustment:
+- Product mode, when click/buy or product-led:
+  - show product
+  - show application/use
+  - show result
 - Short CTA variants by path, with IDs like `cta_sub_1` or `cta_apply_1`:
 
 ## Script Drafts
@@ -332,8 +338,8 @@ For each concept:
 - Source inspiration links
 
 ## 14-Day Sprint Matrix
-| Day | Test mix | Hook template | Script line 0-2s | Pattern tag | Meat | Style ID | CTA variant ID | Source |
-|---:|---|---|---|---|---|---|---|---|
+| Day | Test mix | Hook template | Script line 0-2s | Pattern tag | Meat | Product step | Style ID | CTA variant ID | Source |
+|---:|---|---|---|---|---|---|---|---|---|
 
 ## Shot Lists
 For each concept:
@@ -438,8 +444,9 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal
 - [ ] Channel-level synthesis starts with Avatar, Promise, Proof, and Path.
 - [ ] Hook library includes raw hooks, templates, ready-to-read hook lines, pattern tags, and winner-adjacent variants.
 - [ ] Script and shot-list sections use creator-facing script lines plus builder notes for Hook -> Meat -> Payoff -> CTA.
+- [ ] Product brands with `product_mode` show product, application, and result inside the meat.
 - [ ] Reports stay industry-agnostic unless the user supplies brand context.
-- [ ] 14-day sprint matrix uses 70/20/10, compact style/CTA IDs, `script_line_0_2`, and source links.
+- [ ] 14-day sprint matrix uses 70/20/10, compact style/CTA IDs, `script_line_0_2`, product steps, and source links.
 - [ ] Thumbnail concepts and storyboard/image-generation prompts avoid copying source creators.
 - [ ] Non-YouTube platform data came from user-provided exports and is labeled by platform.
 - [ ] Reusable signal library updates are local unless the user explicitly asks to share/export them.

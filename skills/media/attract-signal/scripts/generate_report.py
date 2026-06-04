@@ -23,6 +23,8 @@ DEFAULT_BRAND = {
     "promise": "",
     "primary_path": "",
     "channel_style": "",
+    "product_mode": "",
+    "product_name": "",
     "proof_points": [],
     "constraints": [],
     "filming_resources": [],
@@ -261,6 +263,12 @@ def infer_primary_path(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
     explicit = str(brand.get("primary_path") or brand.get("path") or "").strip().lower()
     if explicit:
         return explicit
+    product_mode = str(brand.get("product_mode") or "").strip().lower()
+    raw_offer = str(brand.get("offer") or "")
+    offer = "" if raw_offer == DEFAULT_BRAND["offer"] else raw_offer.lower()
+    industry = str(brand.get("industry") or "").lower()
+    if product_mode in ("true", "yes", "1", "on") or any(term in f"{offer} {industry}" for term in ("shopify", "ecommerce", "e-commerce", "dtc", "product", "cleaner", "device", "tool", "bottle")):
+        return "click"
     blob = " ".join(video_text(video) for video in top)
     if "apply" in blob:
         return "apply"
@@ -273,16 +281,52 @@ def infer_primary_path(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
     return "sub"
 
 
+def is_product_mode(brand: Dict[str, Any], primary_path: str, channel_style: str) -> bool:
+    explicit = str(brand.get("product_mode") or "").strip().lower()
+    if explicit in ("true", "yes", "1", "on"):
+        return True
+    if explicit in ("false", "no", "0", "off"):
+        return False
+    raw_offer = str(brand.get("offer") or "")
+    offer = "" if raw_offer == DEFAULT_BRAND["offer"] else raw_offer.lower()
+    industry = str(brand.get("industry") or "").lower()
+    if primary_path in ("click", "buy") or channel_style == "product_led":
+        return True
+    return any(term in f"{offer} {industry}" for term in ("shopify", "ecommerce", "e-commerce", "dtc", "product", "cleaner", "device", "tool", "bottle"))
+
+
+def resolve_product_label(brand: Dict[str, Any], topic: str = "general") -> str:
+    name = str(brand.get("product_name") or "").strip()
+    if name:
+        return name
+    offer = str(brand.get("offer") or "").strip()
+    if offer and offer != DEFAULT_BRAND["offer"]:
+        return offer
+    if topic == "cleaning":
+        return "the cleaner"
+    return "the product"
+
+
+def product_label(brand: Dict[str, Any], spine: Dict[str, Any]) -> str:
+    return str(spine.get("product_label") or resolve_product_label(brand, channel_topic(spine)))
+
+
 def infer_spine(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: List[str]) -> Dict[str, Any]:
     meats = dominant_meats(top)
-    return {
+    primary_path = infer_primary_path(top, brand)
+    channel_style = infer_channel_style(top, brand)
+    product_mode = is_product_mode(brand, primary_path, channel_style)
+    spine = {
         "avatar": infer_avatar(top, brand),
         "promise": infer_promise(top, brand, keywords),
         "proof": ", ".join(meats),
         "meats": meats,
-        "primary_path": infer_primary_path(top, brand),
-        "channel_style": infer_channel_style(top, brand),
+        "primary_path": primary_path,
+        "channel_style": "product_led" if product_mode and channel_style == "face_led" and primary_path in ("click", "buy") else channel_style,
+        "product_mode": product_mode,
     }
+    spine["product_label"] = resolve_product_label(brand, channel_topic(spine))
+    return spine
 
 
 def channel_topic(spine: Dict[str, Any]) -> str:
@@ -414,6 +458,7 @@ def build_hook_library(top: List[Dict[str, Any]], transcripts: Dict[str, Dict[st
 def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
     topic = channel_topic(spine)
     normalized = path.lower().strip()
+    product = product_label({}, spine)
     if normalized == "sub":
         reason = {
             "cleaning": "the next gross cleaning test",
@@ -426,6 +471,11 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
             {"id": "cta_sub_2", "text": "Subscribe. I am testing the next one tomorrow."},
         ]
     if normalized == "click":
+        if spine.get("product_mode"):
+            return [
+                {"id": "cta_click_1", "text": f"Tap the link to grab {product}."},
+                {"id": "cta_click_2", "text": "Use code DRAIN at checkout today."},
+            ]
         return [
             {"id": "cta_click_1", "text": "Tap the link for the full breakdown."},
             {"id": "cta_click_2", "text": "Link is in the description if you want the next step."},
@@ -436,6 +486,11 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
             {"id": "cta_optin_2", "text": "Comment TEST if you want the template."},
         ]
     if normalized == "buy":
+        if spine.get("product_mode"):
+            return [
+                {"id": "cta_buy_1", "text": f"Use code DRAIN to try {product} today."},
+                {"id": "cta_buy_2", "text": "Grab it today while the test is fresh."},
+            ]
         return [
             {"id": "cta_buy_1", "text": "Use code SIGNAL if you want to try it."},
             {"id": "cta_buy_2", "text": "Grab it today while the test is fresh."},
@@ -455,8 +510,8 @@ def cta_by_id(ctas: List[Dict[str, str]]) -> Dict[str, str]:
 def style_adjustment(channel_style: str) -> str:
     return {
         "face_led": "Put the creator or subject on camera early; use reaction and voiceover to carry stakes.",
-        "product_led": "Open on the product/result; keep hands, demo, and proof visible before the CTA.",
-        "faceless": "Use captions, tight b-roll, screen/game footage, and fast proof cuts instead of personality beats.",
+        "product_led": "Open on product plus mess, hand enters frame, show application, then reveal the result.",
+        "faceless": "Open on mess plus bold on-screen text, use hands/b-roll and captions; no talking head needed.",
     }.get(channel_style, "Match the channel's native framing while preserving hook, proof, payoff, CTA.")
 
 
@@ -470,7 +525,39 @@ def style_id(channel_style: str) -> str:
 
 def style_library(channel_style: str) -> Dict[str, str]:
     sid = style_id(channel_style)
-    return {sid: style_adjustment(channel_style)}
+    styles = {sid: style_adjustment(channel_style)}
+    if sid != "style_product_1":
+        styles["style_product_1"] = style_adjustment("product_led")
+    if sid != "style_faceless_1":
+        styles["style_faceless_1"] = style_adjustment("faceless")
+    return styles
+
+
+def product_demo_step(brand: Dict[str, Any], spine: Dict[str, Any]) -> str:
+    product = product_label(brand, spine)
+    if spine.get("product_mode"):
+        return f"Show {product}, apply it to the mess, then reveal the result."
+    return "Show the proof fast, then make the payoff visible."
+
+
+def script_meat_line(video: Dict[str, Any], brand: Dict[str, Any], spine: Dict[str, Any]) -> str:
+    if spine.get("product_mode"):
+        product = product_label(brand, spine)
+        if channel_topic(spine) == "cleaning":
+            return f"Show {product} hitting the gunk, then reveal how fast it cuts through."
+        return f"Show {product} in use, then reveal the specific result."
+    return f"Show the {infer_meat_type(video).lower()} proof fast, then make the payoff visible."
+
+
+def conversion_tracking_note(spine: Dict[str, Any]) -> str:
+    path = spine["primary_path"]
+    if path in ("click", "buy"):
+        return "Track UTM sessions, add-to-carts, purchases, conversion rate, and revenue in Shopify for each sprint row."
+    if path == "opt_in":
+        return "Track comments/DM requests, opt-ins, qualified replies, and downstream booked calls or sales."
+    if path == "apply":
+        return "Track application link clicks, started applications, submitted applications, and qualified applicants."
+    return "Track watch time, retention, follows/subs, comments, and saves for each sprint row."
 
 
 def creator_hook_line(hook_entry: Dict[str, Any], index: int = 0) -> str:
@@ -484,8 +571,11 @@ def concept_title(video: Dict[str, Any], brand: Dict[str, Any], spine: Dict[str,
     subject = brand.get("industry")
     if not subject or subject == DEFAULT_BRAND["industry"]:
         subject = spine.get("promise") or "This Channel"
-    trend = infer_trend(video).split("/")[0].strip()
-    return f"Concept {index}: {trend.title()} Signal for {str(subject).title()}"
+    pattern = hook_pattern_tag(video)
+    meat = infer_meat_type(video)
+    if meat == "Demonstration":
+        meat = "Demo"
+    return f"Concept {index}: {pattern} {meat} for {str(subject).title()}"
 
 
 def build_sprint_rows(hook_library: Dict[str, List[Dict[str, Any]]], spine: Dict[str, Any], days: int = 14) -> List[Dict[str, str]]:
@@ -528,6 +618,7 @@ def build_sprint_rows(hook_library: Dict[str, List[Dict[str, Any]]], spine: Dict
             "script_line_0_2": script_line,
             "pattern_tag": pattern_tag,
             "meat_type": meat_type,
+            "product_step": product_demo_step({}, spine),
             "style_id": sid,
             "primary_path": spine["primary_path"],
             "cta_variant_id": ctas[(day - 1) % len(ctas)]["id"],
@@ -587,6 +678,7 @@ def write_calendar(path: Path, rows: List[Dict[str, str]]) -> None:
             "script_line_0_2",
             "pattern_tag",
             "meat_type",
+            "product_step",
             "style_id",
             "primary_path",
             "cta_variant_id",
@@ -703,6 +795,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append(f"- Promise: {spine['promise']}")
     lines.append(f"- Proof: {spine['proof']}")
     lines.append(f"- Path: {spine['primary_path']}")
+    lines.append(f"- Product mode: {'on' if spine.get('product_mode') else 'off'}")
     lines.append(f"- Brand context: {brand.get('assumption_note')}")
     lines.append("")
     lines.append("## Executive Summary")
@@ -717,6 +810,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("- Recommendations are normalized around Avatar, Promise, Proof, and Path so the same engine works across face-led, product-led, and faceless channels.")
     lines.append("- The 14-day sprint uses a 70/20/10 testing mix: proven hooks, winner-adjacent variations, then one new experiment.")
     lines.append("- In the next 2 hours: batch-film the 14 sprint hooks below, post 1/day, log watch time plus path conversions, then feed winners back into the next scan.")
+    lines.append(f"- Measurement: {conversion_tracking_note(spine)}")
     if keywords:
         lines.append(f"- Repeated language signals: {', '.join(keywords)}.")
     lines.append("")
@@ -729,6 +823,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append(f"| Proof | {md_escape(spine['proof'])} | Use these as the two main meats after the hook. |")
     lines.append(f"| Path | {md_escape(spine['primary_path'])} | Pick CTAs from this path family instead of generic engagement asks. |")
     lines.append(f"| Channel style | {md_escape(spine['channel_style'])} | {md_escape(style_adjustment(spine['channel_style']))} |")
+    lines.append(f"| Product mode | {'on' if spine.get('product_mode') else 'off'} | {'Feature the product in the meat: show product, application, and result.' if spine.get('product_mode') else 'Use this when the brand needs click/buy content or product-led proof.'} |")
     lines.append("")
     lines.append("## Hook Library")
     lines.append("")
@@ -759,6 +854,8 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     for sid, note in styles.items():
         lines.append(f"- `{sid}`: {note}")
     lines.append(f"- Primary path: `{spine['primary_path']}`.")
+    if spine.get("product_mode"):
+        lines.append(f"- Product step: {product_demo_step(brand, spine)}")
     for cta in ctas:
         lines.append(f"- `{cta['id']}`: {cta['text']}")
     lines.append("- Script structure: Hook from library -> Meat -> Payoff -> CTA.")
@@ -856,6 +953,8 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
         lines.append(f"- `builder_note`: Based on template `{hook_template(video)}` and pattern `{hook_pattern_tag(video)}`.")
         lines.append(f"- Pattern tag: {hook_pattern_tag(video)}")
         lines.append(f"- Meat: {infer_meat_type(video)}")
+        if spine.get("product_mode"):
+            lines.append(f"- Product step: {product_demo_step(brand, spine)}")
         lines.append(f"- Script beat: hook, {infer_meat_type(video).lower()} meat, payoff, then `{ctas[0]['id']}`.")
         lines.append(f"- Avoid copying: do not reuse the source creator's exact premise, wording, setting, or edit sequence.")
         lines.append("")
@@ -867,7 +966,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
         lines.append(f"### Script {index}: {concept_title(video, brand, spine, index)}")
         lines.append("")
         lines.append(f"- `script_line_0_2`: {creator_hook_line(hook_entry, 0)}")
-        lines.append(f"- `script_line_meat`: Show the {infer_meat_type(video).lower()} proof fast, then make the payoff visible.")
+        lines.append(f"- `script_line_meat`: {script_meat_line(video, brand, spine)}")
         lines.append("- `script_line_payoff`: Here is the part that makes the result worth the watch.")
         lines.append(f"- `script_line_cta`: {cta['text']}")
         lines.append(f"- `builder_note`: Template `{hook_template(video)}`, pattern `{hook_pattern_tag(video)}`, meat `{infer_meat_type(video)}`, style `{style_id(spine['channel_style'])}`.")
@@ -878,7 +977,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("| Shot | Duration | Structure | Framing | Action | Notes |")
     lines.append("|---:|---:|---|---|---|---|")
     lines.append(f"| 1 | 0-2s | Hook | style-specific first frame | Use a winning ready-to-read hook | {style_id(spine['channel_style'])}: {style_adjustment(spine['channel_style'])} |")
-    lines.append(f"| 2 | 2-8s | Meat | proof-first shot | Deliver {spine['meats'][0].lower()} evidence | Keep the promise visible. |")
+    lines.append(f"| 2 | 2-8s | Meat | proof-first shot | {product_demo_step(brand, spine) if spine.get('product_mode') else 'Deliver ' + spine['meats'][0].lower() + ' evidence'} | Keep the promise visible. |")
     lines.append(f"| 3 | 8-18s | Meat | sequence cuts | Add {spine['meats'][1].lower()} support | Escalate stakes or clarity. |")
     lines.append("| 4 | 18-25s | Payoff | reveal/result frame | Show the result, lesson, or reversal | Make the value obvious without context. |")
     lines.append(f"| 5 | 25-30s | CTA | final frame | Use `{ctas[0]['id']}` or `{ctas[-1]['id']}` | Define what to do, how, when, what they get, and what happens next. |")
@@ -908,13 +1007,13 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("")
     lines.append("## 14-Day Sprint Matrix")
     lines.append("")
-    lines.append("| Day | Test mix | Hook template | Script line 0-2s | Pattern tag | Meat | Style | CTA | Source |")
-    lines.append("|---:|---|---|---|---|---|---|---|---|")
+    lines.append("| Day | Test mix | Hook template | Script line 0-2s | Pattern tag | Meat | Product step | Style | CTA | Source |")
+    lines.append("|---:|---|---|---|---|---|---|---|---|---|")
     for row in build_sprint_rows(hook_library, spine, 14):
         cta_text = cta_lookup.get(row["cta_variant_id"], row["cta_variant_id"])
         lines.append(
             f"| {row['day']} | {md_escape(row['test_type'])} | {md_escape(row['hook_template'])} | {md_escape(row['script_line_0_2'])} | "
-            f"{md_escape(row['pattern_tag'])} | {md_escape(row['meat_type'])} | {md_escape(row['style_id'])} | "
+            f"{md_escape(row['pattern_tag'])} | {md_escape(row['meat_type'])} | {md_escape(row['product_step'])} | {md_escape(row['style_id'])} | "
             f"{md_escape(row['cta_variant_id'])}: {md_escape(cta_text)} | [source]({row['source_url']}) |"
         )
     return "\n".join(lines) + "\n"

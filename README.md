@@ -169,6 +169,8 @@ proof_points:
   - before-and-after results
 primary_path: sub
 channel_style: face_led
+product_mode: false
+product_name: ""
 constraints:
   - film with a phone
 filming_resources:
@@ -241,8 +243,20 @@ python3 skills/media/attract-signal/scripts/signal_library.py search "challenge"
 Sprint CSV columns include:
 
 ```text
-day, test_type, hook_template, script_line_0_2, pattern_tag, meat_type, style_id, primary_path, cta_variant_id, source_url
+day, test_type, hook_template, script_line_0_2, pattern_tag, meat_type, product_step, style_id, primary_path, cta_variant_id, source_url
 ```
+
+For a Shopify or DTC product brand, set:
+
+```yaml
+offer: drain cleaner bundle
+product_name: the drain cleaner
+primary_path: click
+channel_style: product_led
+product_mode: true
+```
+
+That makes the report use product-led proof, short click/buy CTAs, product/faceless style options, and a sprint row that forces the meat to show product, application, and result.
 
 Creating the default Doc is part of the report workflow. Any sharing, permission changes, or edits to existing Docs should still be approved by the user first.
 

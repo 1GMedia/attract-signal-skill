@@ -9,6 +9,8 @@ proof_points:
   - behind-the-scenes process
 primary_path: sub
 channel_style: face_led
+product_mode: false
+product_name: ""
 constraints:
   - film with a phone
   - keep videos under 30 seconds
