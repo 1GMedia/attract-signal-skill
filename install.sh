@@ -30,7 +30,7 @@ install_one() {
 
 case "$TARGET" in
   hermes)
-    install_one "Hermes" "${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal"
+    install_one "Hermes" "${HERMES_HOME:-$HOME/.hermes}/skills/attract-signal"
     ;;
   codex)
     install_one "Codex" "${CODEX_HOME:-$HOME/.codex}/skills/attract-signal"
@@ -39,7 +39,7 @@ case "$TARGET" in
     install_one "Claude" "$HOME/.claude/skills/attract-signal"
     ;;
   all)
-    install_one "Hermes" "${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal"
+    install_one "Hermes" "${HERMES_HOME:-$HOME/.hermes}/skills/attract-signal"
     install_one "Codex" "${CODEX_HOME:-$HOME/.codex}/skills/attract-signal"
     install_one "Claude" "$HOME/.claude/skills/attract-signal"
     ;;

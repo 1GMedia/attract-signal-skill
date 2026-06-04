@@ -10,7 +10,7 @@ required_commands:
 metadata:
   portable_skill: true
   install_targets:
-    hermes: ~/.hermes/skills/media/attract-signal
+    hermes: ~/.hermes/skills/attract-signal
     codex: ~/.codex/skills/attract-signal
     claude: ~/.claude/skills/attract-signal
   hermes:
@@ -78,7 +78,7 @@ For shell examples, resolve the installed skill path once:
 
 ```bash
 # Hermes
-export SKILL_DIR="${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal"
+export SKILL_DIR="${HERMES_HOME:-$HOME/.hermes}/skills/attract-signal"
 
 # Codex
 export SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/attract-signal"

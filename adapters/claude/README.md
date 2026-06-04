@@ -1,6 +1,12 @@
 # Claude Adapter
 
-Install the canonical skill folder into Claude Code:
+Recommended install through the open agent skills CLI:
+
+```bash
+npx skills add 1GMedia/attract-signal-skill --skill attract-signal -g -a claude-code
+```
+
+Manual fallback from this repository:
 
 ```bash
 ./install.sh claude

@@ -1,6 +1,12 @@
 # Codex Adapter
 
-Install the canonical skill folder into Codex:
+Recommended install through the open agent skills CLI:
+
+```bash
+npx skills add 1GMedia/attract-signal-skill --skill attract-signal -g -a codex
+```
+
+Manual fallback from this repository:
 
 ```bash
 ./install.sh codex

@@ -43,13 +43,13 @@ If `gog` is not installed or authenticated, report generation still writes the l
 
 ## Install The Skill
 
-Recommended, using the open agent skills CLI from Vercel Labs:
+Recommended, using the open agent skills CLI from Vercel Labs. This is the clean publishing path: `npx` runs the installer CLI, while this GitHub repo stays the source of truth for the skill.
 
 ```bash
 npx skills add 1GMedia/attract-signal-skill --skill attract-signal -g -a codex -a claude-code -a hermes-agent
 ```
 
-You can also install to every supported agent detected by the CLI:
+Install to every supported agent detected by the CLI:
 
 ```bash
 npx skills add 1GMedia/attract-signal-skill --all
@@ -61,7 +61,7 @@ List the skill before installing:
 npx skills add 1GMedia/attract-signal-skill --list
 ```
 
-Manual installer from this repository:
+Manual fallback from this repository, useful when `npx` is unavailable or you want to copy the skill from a local checkout:
 
 ```bash
 ./install.sh hermes
@@ -74,12 +74,38 @@ Install targets:
 
 | target | install path |
 | --- | --- |
-| `hermes` / `hermes-agent` | `~/.hermes/skills/attract-signal` through `npx skills`; `~/.hermes/skills/media/attract-signal` through `install.sh` |
+| `hermes` / `hermes-agent` | `~/.hermes/skills/attract-signal` |
 | `codex` | `~/.codex/skills/attract-signal` |
 | `claude` / `claude-code` | `~/.claude/skills/attract-signal` |
 | `all` | installs the same skill folder to all three paths |
 
 The same `SKILL.md` and scripts are used everywhere. Local Markdown/CSV files are the universal outputs; Google Docs and Google Sheets publishing are optional `gogcli` enhancements.
+
+## Publishing Model
+
+`attract-signal` is intentionally packaged as a single-skill GitHub repo. Do not publish a separate npm package for the skill itself unless a custom installer is needed later. The public install surface should stay:
+
+```bash
+npx skills add 1GMedia/attract-signal-skill --skill attract-signal -g -a codex -a claude-code -a hermes-agent
+```
+
+Future Attract skills can live in their own standalone repos first, then be mirrored into a catalog repo such as `1GMedia/attract-skills`:
+
+```text
+skills/
+  content/attract-signal/SKILL.md
+  web/attract-mirror/SKILL.md
+  automation/attract-atomize/SKILL.md
+```
+
+That future catalog would let people browse and install multiple Attract skills from one place:
+
+```bash
+npx skills add 1GMedia/attract-skills --list
+npx skills add 1GMedia/attract-skills --skill attract-signal -g -a codex
+```
+
+Recommended rule: individual repos remain the source of truth; the catalog repo vendors or syncs released copies for discovery.
 
 ## Run The Scanner Directly
 
