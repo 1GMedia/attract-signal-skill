@@ -36,7 +36,7 @@ Use this skill when the user asks to:
 - Analyze hooks, visual hooks, formats, content trends, and transcript patterns.
 - Create a signal and trend breakdown that can become original scripts, shot lists, Google Docs, or storyboards.
 - Build a source-cited content signal library.
-- Create an industry-agnostic or brand-specific 30-day content strategy.
+- Create an industry-agnostic or brand-specific 14-day content testing sprint.
 
 Don't use this for long-form YouTube summaries only; use `youtube-content` directly for single-video transcript transforms.
 
@@ -65,7 +65,7 @@ gog --version
 
 If Homebrew is unavailable, use the `google-workspace` skill or Docker install path from the `gogcli` skill.
 
-The default report workflow writes a local Markdown file first, then creates a Google Doc copy with `gog docs create --file`. If `gog` is missing or unauthenticated, keep the local Markdown and tell the user exactly what failed. Use `--no-google-doc` only for local-only tests or CI.
+The default report workflow writes a local Markdown file first, then creates a Google Doc copy with `gog docs create --file`. Reports should normalize every channel into Avatar, Promise, Proof, and Path, then build Hooks -> Meats -> CTAs -> 14-day tests. If `gog` is missing or unauthenticated, keep the local Markdown and tell the user exactly what failed. Use `--no-google-doc` only for local-only tests or CI.
 
 ## Workflow
 
@@ -175,13 +175,14 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/genera
   --signals signals.json \
   --transcripts-dir transcripts \
   --out attract-signal-report.md \
-  --calendar content-calendar.csv
+  --calendar content-sprint.csv
 ```
 
 This creates both:
 
 - `attract-signal-report.md` locally
 - a native Google Doc copy, with metadata saved as `attract-signal-report.google-doc.json`
+- `content-sprint.csv`, a 14-day test sprint matrix
 
 For brand-specific strategy, pass a simple `brand.yaml`:
 
@@ -193,6 +194,8 @@ offer: a clear, reliable service package
 tone: helpful, direct, practical, and warm
 proof_points:
   - before-and-after results
+primary_path: sub
+channel_style: face_led
 constraints:
   - film with a phone
 filming_resources:
@@ -209,7 +212,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/genera
   --brand brand.yaml \
   --transcripts-dir transcripts \
   --out attract-signal-report.md \
-  --calendar content-calendar.csv \
+  --calendar content-sprint.csv \
   --doc-title "Attract Signal Brief - <Brand>"
 ```
 
@@ -287,31 +290,49 @@ After individual analyses, make a channel/trend brief:
 ```markdown
 # YouTube Shorts Trend Brief: <channel>
 
+## Strategy Spine
+- Avatar: <primary viewer and optional secondary viewer>
+- Promise: <why the channel exists in one sentence>
+- Proof: <two dominant meats: Demonstration, Testimonial, Education, Story>
+- Path: <sub, click, opt_in, buy, apply>
+- Channel style: <face_led, product_led, faceless>
+
 ## Top Winners
 | Rank | Source | Views | Likes | Trend type | Hook type | Strategy angle |
 |---|---:|---:|---|---|---|---|
 
-## Repeating Patterns
-- Hook formulas:
+## Hook Library
+- Top 5 raw hooks:
+- Generalized hook templates:
+- Winner-adjacent variations:
+- Pattern tags: Curiosity, Challenge, Spectacle, Transformation, Social Proof, Narrative
+
+## Repeating Visual Patterns
 - Visual formulas:
 - Editing rhythm:
 - Common props/products/settings:
 - Common emotions:
 - Common CTAs/loop endings:
 
-## Content Opportunities for <user brand>
-1. <original concept inspired by pattern> — cite source(s)
-2. ...
+## Meats, Style, And CTA System
+- Primary meats:
+- Channel style adjustment:
+- CTA family by path:
 
 ## Script Drafts
 For each concept:
 - Title / working caption
-- 0-2s hook
-- Beat-by-beat script with timestamps
+- Hook from library
+- Meat
+- Payoff
+- CTA
 - On-screen text
 - Voiceover/dialogue
-- CTA
 - Source inspiration links
+
+## 14-Day Sprint Matrix
+| Day | Test mix | Hook template | Pattern tag | Meat | Channel style adjustment | Path / CTA | Source |
+|---:|---|---|---|---|---|---|---|
 
 ## Shot Lists
 For each concept:
@@ -338,7 +359,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/genera
   --brand brand.yaml \
   --transcripts-dir transcripts \
   --out attract-signal-report.md \
-  --calendar content-calendar.csv \
+  --calendar content-sprint.csv \
   --doc-title "Attract Signal Brief - <Brand or Channel>"
 ```
 
@@ -368,14 +389,14 @@ gog drive get <docId> --json --select id,name,mimeType,webViewLink,owners
 
 If `gog` is unavailable, keep the local Markdown artifact and tell the user exactly what OAuth/install step is missing; use `google-workspace`'s `GAPI docs create` / `GAPI docs append` flow only when explicitly requested. Never share, permission-change, or overwrite Google Docs without user approval.
 
-### 9. Google Sheets calendar export
+### 9. Google Sheets sprint export
 
 After the user approves a Sheets write:
 
 ```bash
 python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/export_calendar_sheets.py \
-  --calendar content-calendar.csv \
-  --title "Attract Signal Calendar - <Brand>"
+  --calendar content-sprint.csv \
+  --title "Attract Signal Sprint - <Brand>"
 ```
 
 ### 10. Reusable signal library
@@ -413,9 +434,11 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal
 - [ ] Baselines, normalized engagement, signal score, and signal reason are present when metadata allows.
 - [ ] Transcript status is recorded for every video.
 - [ ] Individual breakdowns include trend type, hook, visual hooks, and signal pattern.
-- [ ] Channel-level synthesis produces original brand angles, not copied scripts.
+- [ ] Channel-level synthesis starts with Avatar, Promise, Proof, and Path.
+- [ ] Hook library includes raw hooks, templates, pattern tags, and winner-adjacent variants.
+- [ ] Script and shot-list sections use Hook -> Meat -> Payoff -> CTA.
 - [ ] Reports stay industry-agnostic unless the user supplies brand context.
-- [ ] 30-day calendar rows include source links.
+- [ ] 14-day sprint matrix uses 70/20/10 and includes source links.
 - [ ] Thumbnail concepts and storyboard/image-generation prompts avoid copying source creators.
 - [ ] Non-YouTube platform data came from user-provided exports and is labeled by platform.
 - [ ] Reusable signal library updates are local unless the user explicitly asks to share/export them.

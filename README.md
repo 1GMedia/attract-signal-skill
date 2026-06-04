@@ -1,6 +1,6 @@
 # Attract Signal Skill
 
-A shareable Hermes/Codex skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, repeatable hooks, visual mechanics, audience-response patterns, source citations, and strategy angles that can become original scripts, shot lists, storyboard prompts, and 30-day content calendars.
+A shareable Hermes/Codex skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, repeatable hooks, proof/meat types, CTA paths, visual mechanics, source citations, and 14-day content test sprints.
 
 Default example channel:
 
@@ -17,8 +17,11 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 - Compares signal strength across platforms when normalized exports are provided.
 - Supports `--cookies-from-browser` / `--cookies` for YouTube sign-in or bot checks.
 - Produces JSON, local Markdown, Google Doc, and CSV strategy artifacts.
-- Guides the agent to fetch transcripts, analyze hooks and visual hooks, and turn content signals into original brand-safe strategy concepts for any industry.
+- Normalizes every report into Avatar, Promise, Proof, and Path, even when `brand.yaml` is missing.
+- Makes the hook library the center of the report with raw hooks, reusable templates, pattern tags, and winner-adjacent variations.
+- Guides the agent to fetch transcripts, analyze hooks and visual hooks, and turn content signals into original brand-safe strategy tests for any industry.
 - Generates thumbnail concepts, storyboard prompts, image-generation direction, and source-cited script/shot-list templates.
+- Generates a 14-day sprint matrix using a 70/20/10 mix of proven hooks, winner-adjacent hooks, and new experiments.
 - Maintains an optional local signal library for reusable pattern memory.
 - Creates a Google Docs copy by default through `gogcli` after the local Markdown report is written.
 - Supports optional Google Sheets calendar export through `gogcli`.
@@ -117,10 +120,10 @@ python3 skills/media/attract-signal/scripts/generate_report.py \
   --signals ./signals.json \
   --transcripts-dir ./transcripts \
   --out ./attract-signal-report.md \
-  --calendar ./content-calendar.csv
+  --calendar ./content-sprint.csv
 ```
 
-This writes `./attract-signal-report.md`, creates a Google Doc copy by default, and writes Google Doc metadata beside the report as `./attract-signal-report.google-doc.json`.
+This writes `./attract-signal-report.md`, creates a Google Doc copy by default, and writes Google Doc metadata beside the report as `./attract-signal-report.google-doc.json`, and exports a 14-day sprint matrix CSV.
 
 Brand-specific report:
 
@@ -130,7 +133,7 @@ python3 skills/media/attract-signal/scripts/generate_report.py \
   --brand examples/brand.example.yaml \
   --transcripts-dir ./transcripts \
   --out ./attract-signal-report.md \
-  --calendar ./content-calendar.csv \
+  --calendar ./content-sprint.csv \
   --doc-title "Attract Signal Brief - Example Brand"
 ```
 
@@ -142,7 +145,7 @@ python3 skills/media/attract-signal/scripts/generate_report.py \
   --brand examples/brand.example.yaml \
   --transcripts-dir ./transcripts \
   --out ./attract-signal-report.md \
-  --calendar ./content-calendar.csv \
+  --calendar ./content-sprint.csv \
   --no-google-doc
 ```
 
@@ -164,6 +167,8 @@ offer: a clear, reliable service package
 tone: helpful, direct, practical, and warm
 proof_points:
   - before-and-after results
+primary_path: sub
+channel_style: face_led
 constraints:
   - film with a phone
 filming_resources:
@@ -181,7 +186,7 @@ Use attract-signal to scan this channel's Shorts, find videos over 10,000 likes,
 ```
 
 ```text
-Analyze these 5 channels for content signals and make me a 30-day content strategy for my brand.
+Analyze these 5 channels for content signals and make me a 14-day test sprint for my brand.
 ```
 
 ```text
@@ -204,7 +209,7 @@ python3 skills/media/attract-signal/scripts/generate_report.py \
   --signals ./signals.json \
   --brand examples/brand.example.yaml \
   --out ./attract-signal-report.md \
-  --calendar ./content-calendar.csv \
+  --calendar ./content-sprint.csv \
   --doc-title "Attract Signal Brief - Brand Name" \
   --open-doc
 ```
@@ -217,12 +222,12 @@ python3 skills/media/attract-signal/scripts/publish_doc.py \
   --title "Attract Signal Brief - Brand Name"
 ```
 
-Export a generated content calendar to Google Sheets after approval:
+Export a generated 14-day sprint matrix to Google Sheets after approval:
 
 ```bash
 python3 skills/media/attract-signal/scripts/export_calendar_sheets.py \
-  --calendar ./content-calendar.csv \
-  --title "Attract Signal Calendar - Brand Name"
+  --calendar ./content-sprint.csv \
+  --title "Attract Signal Sprint - Brand Name"
 ```
 
 Build a reusable local signal library:
@@ -239,6 +244,9 @@ Creating the default Doc is part of the report workflow. Any sharing, permission
 Generated reports include:
 
 - Executive Summary
+- Strategy Spine
+- Hook Library
+- Meats, Style, And CTA System
 - Top Signals
 - Source Evidence
 - Hook Taxonomy
@@ -252,4 +260,4 @@ Generated reports include:
 - Storyboard Prompts
 - Optional Image Generation Workflow
 - Signal Library Next Step
-- 30-Day Content Calendar
+- 14-Day Sprint Matrix
