@@ -43,7 +43,25 @@ If `gog` is not installed or authenticated, report generation still writes the l
 
 ## Install The Skill
 
-From this repository:
+Recommended, using the open agent skills CLI from Vercel Labs:
+
+```bash
+npx skills add 1GMedia/attract-signal-skill --skill attract-signal -g -a codex -a claude-code -a hermes-agent
+```
+
+You can also install to every supported agent detected by the CLI:
+
+```bash
+npx skills add 1GMedia/attract-signal-skill --all
+```
+
+List the skill before installing:
+
+```bash
+npx skills add 1GMedia/attract-signal-skill --list
+```
+
+Manual installer from this repository:
 
 ```bash
 ./install.sh hermes
@@ -56,9 +74,9 @@ Install targets:
 
 | target | install path |
 | --- | --- |
-| `hermes` | `~/.hermes/skills/media/attract-signal` |
+| `hermes` / `hermes-agent` | `~/.hermes/skills/attract-signal` through `npx skills`; `~/.hermes/skills/media/attract-signal` through `install.sh` |
 | `codex` | `~/.codex/skills/attract-signal` |
-| `claude` | `~/.claude/skills/attract-signal` |
+| `claude` / `claude-code` | `~/.claude/skills/attract-signal` |
 | `all` | installs the same skill folder to all three paths |
 
 The same `SKILL.md` and scripts are used everywhere. Local Markdown/CSV files are the universal outputs; Google Docs and Google Sheets publishing are optional `gogcli` enhancements.
