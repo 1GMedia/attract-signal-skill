@@ -25,6 +25,8 @@ DEFAULT_BRAND = {
     "channel_style": "",
     "product_mode": "",
     "product_name": "",
+    "product_url": "",
+    "discount_code": "",
     "proof_points": [],
     "constraints": [],
     "filming_resources": [],
@@ -326,6 +328,8 @@ def infer_spine(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: List
         "product_mode": product_mode,
     }
     spine["product_label"] = resolve_product_label(brand, channel_topic(spine))
+    spine["product_url"] = str(brand.get("product_url") or "").strip()
+    spine["discount_code"] = str(brand.get("discount_code") or "").strip()
     return spine
 
 
@@ -459,6 +463,7 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
     topic = channel_topic(spine)
     normalized = path.lower().strip()
     product = product_label({}, spine)
+    discount_code = str(spine.get("discount_code") or "").strip()
     if normalized == "sub":
         reason = {
             "cleaning": "the next gross cleaning test",
@@ -473,8 +478,8 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
     if normalized == "click":
         if spine.get("product_mode"):
             return [
-                {"id": "cta_click_1", "text": f"Tap the link to grab {product}."},
-                {"id": "cta_click_2", "text": "Use code DRAIN at checkout today."},
+                {"id": "cta_click_1", "text": f"Tap the link to try {product}."},
+                {"id": "cta_click_2", "text": f"Use code {discount_code} at checkout today." if discount_code else f"Get {product} from the product page."},
             ]
         return [
             {"id": "cta_click_1", "text": "Tap the link for the full breakdown."},
@@ -488,8 +493,8 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
     if normalized == "buy":
         if spine.get("product_mode"):
             return [
-                {"id": "cta_buy_1", "text": f"Use code DRAIN to try {product} today."},
-                {"id": "cta_buy_2", "text": "Grab it today while the test is fresh."},
+                {"id": "cta_buy_1", "text": f"Use code {discount_code} to try {product} today." if discount_code else f"Buy {product} from the product page."},
+                {"id": "cta_buy_2", "text": f"Try {product} while this test is fresh."},
             ]
         return [
             {"id": "cta_buy_1", "text": "Use code SIGNAL if you want to try it."},
@@ -544,7 +549,7 @@ def script_meat_line(video: Dict[str, Any], brand: Dict[str, Any], spine: Dict[s
     if spine.get("product_mode"):
         product = product_label(brand, spine)
         if channel_topic(spine) == "cleaning":
-            return f"Show {product} hitting the gunk, then reveal how fast it cuts through."
+            return f"Show {product} hitting the mess, then reveal the visible lift/wipe-away result."
         return f"Show {product} in use, then reveal the specific result."
     return f"Show the {infer_meat_type(video).lower()} proof fast, then make the payoff visible."
 
@@ -796,6 +801,9 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append(f"- Proof: {spine['proof']}")
     lines.append(f"- Path: {spine['primary_path']}")
     lines.append(f"- Product mode: {'on' if spine.get('product_mode') else 'off'}")
+    if spine.get("product_mode"):
+        product_source = f" ({spine['product_url']})" if spine.get("product_url") else ""
+        lines.append(f"- Product: {product_label(brand, spine)}{product_source}")
     lines.append(f"- Brand context: {brand.get('assumption_note')}")
     lines.append("")
     lines.append("## Executive Summary")
@@ -824,6 +832,8 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append(f"| Path | {md_escape(spine['primary_path'])} | Pick CTAs from this path family instead of generic engagement asks. |")
     lines.append(f"| Channel style | {md_escape(spine['channel_style'])} | {md_escape(style_adjustment(spine['channel_style']))} |")
     lines.append(f"| Product mode | {'on' if spine.get('product_mode') else 'off'} | {'Feature the product in the meat: show product, application, and result.' if spine.get('product_mode') else 'Use this when the brand needs click/buy content or product-led proof.'} |")
+    if spine.get("product_mode") and spine.get("product_url"):
+        lines.append(f"| Product source | [{md_escape(product_label(brand, spine))}]({spine['product_url']}) | Use this source for product naming and claims; do not invent product details. |")
     lines.append("")
     lines.append("## Hook Library")
     lines.append("")

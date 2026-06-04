@@ -171,6 +171,8 @@ primary_path: sub
 channel_style: face_led
 product_mode: false
 product_name: ""
+product_url: ""
+discount_code: ""
 constraints:
   - film with a phone
 filming_resources:
@@ -250,13 +252,14 @@ For a Shopify or DTC product brand, set:
 
 ```yaml
 offer: drain cleaner bundle
-product_name: the drain cleaner
+product_name: Magic Foam
+product_url: https://gocleangirl.com/products/magic-foam
 primary_path: click
 channel_style: product_led
 product_mode: true
 ```
 
-That makes the report use product-led proof, short click/buy CTAs, product/faceless style options, and a sprint row that forces the meat to show product, application, and result.
+That makes the report use product-led proof, short click/buy CTAs, product/faceless style options, and a sprint row that forces the meat to show product, application, and result. Product names, offer claims, URLs, and discount codes should come from `brand.yaml` or a verified product page, not from invented placeholders.
 
 Creating the default Doc is part of the report workflow. Any sharing, permission changes, or edits to existing Docs should still be approved by the user first.
 

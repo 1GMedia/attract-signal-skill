@@ -11,6 +11,8 @@ primary_path: sub
 channel_style: face_led
 product_mode: false
 product_name: ""
+product_url: ""
+discount_code: ""
 constraints:
   - film with a phone
   - keep videos under 30 seconds

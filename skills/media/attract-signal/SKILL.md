@@ -198,6 +198,8 @@ primary_path: sub
 channel_style: face_led
 product_mode: false
 product_name: ""
+product_url: ""
+discount_code: ""
 constraints:
   - film with a phone
 filming_resources:
@@ -324,6 +326,7 @@ After individual analyses, make a channel/trend brief:
   - show product
   - show application/use
   - show result
+- Product names, offer claims, URLs, and discount codes must come from `brand.yaml` or a verified product page. Do not invent product names, fake brands, fake coupon codes, or unsupported claims.
 - Short CTA variants by path, with IDs like `cta_sub_1` or `cta_apply_1`:
 
 ## Script Drafts
