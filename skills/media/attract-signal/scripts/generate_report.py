@@ -193,6 +193,18 @@ def business_preset(brand: Dict[str, Any]) -> Dict[str, Any]:
     return BUSINESS_TYPE_PRESETS.get(normalized, BUSINESS_TYPE_PRESETS["other"])
 
 
+def has_brand_context(brand: Dict[str, Any]) -> bool:
+    if str(brand.get("assumption_note") or "").startswith("No brand.yaml supplied"):
+        return False
+    keys = ("brand_name", "business_type", "brand_url", "industry", "audience", "offer", "promise", "primary_path", "channel_style", "product_name", "product_url")
+    for key in keys:
+        value = str(brand.get(key) or "").strip()
+        default = str(DEFAULT_BRAND.get(key) or "").strip()
+        if value and value != default:
+            return True
+    return False
+
+
 def boolish(value: Any) -> Optional[bool]:
     normalized = str(value or "").strip().lower()
     if normalized in ("true", "yes", "1", "on"):
@@ -319,10 +331,12 @@ def infer_avatar(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
     if audience and audience != DEFAULT_BRAND["audience"]:
         return audience
     blob = " ".join(video_text(video) for video in top)
-    if has_phrase(blob, ("ball pit",)) or has_word(blob, ("clean", "cleaned", "dirty", "drain", "sink", "target", "mess")):
-        return "viewers who enjoy satisfying reveals, cleanup tension, and surprising everyday messes"
-    if has_word(blob, ("startup", "founder", "founders", "saas", "ai", "company", "yc", "apply")):
+    if has_word(blob, ("claude", "codex", "openclaw", "agent", "agents", "obsidian", "mcp", "workflow", "workflows")):
+        return "AI builders, creators, and operators looking for practical tool workflows"
+    if has_word(blob, ("startup", "founder", "founders", "saas", "company", "yc", "apply")):
         return "founders, operators, and startup-curious builders"
+    if has_phrase(blob, ("ball pit",)) or has_word(blob, ("clean", "cleaned", "dirty", "drain", "sink", "mess")):
+        return "viewers who enjoy satisfying reveals, cleanup tension, and surprising everyday messes"
     if has_word(blob, ("game", "gaming", "player", "level")):
         return "viewers who enjoy game-like challenges, reactions, and payoff loops"
     if has_word(blob, ("product", "tool", "review", "using")):
@@ -341,10 +355,12 @@ def infer_promise(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: Li
             return f"Make {offer} clear, timely, and actionable."
         return f"Help the avatar get a clearer, faster result from {offer}."
     blob = " ".join(video_text(video) for video in top)
-    if has_word(blob, ("dirty", "clean", "cleaned", "drain", "sink", "mess")):
-        return "Turn ordinary messes into curiosity-driven cleanup payoffs."
+    if has_word(blob, ("claude", "codex", "openclaw", "agent", "agents", "obsidian", "mcp", "workflow", "workflows")):
+        return "Make AI tools feel practical, repeatable, and useful now."
     if has_word(blob, ("startup", "ai", "saas", "company", "apply")):
         return "Make big startup shifts feel legible, urgent, and actionable."
+    if has_word(blob, ("dirty", "clean", "cleaned", "drain", "sink", "mess")):
+        return "Turn ordinary messes into curiosity-driven cleanup payoffs."
     if keywords:
         return f"Make {', '.join(keywords[:3])} feel worth watching through a clear hook and payoff."
     return "Give the avatar a fast reason to watch, a visible payoff, and a clear next step."
@@ -403,6 +419,8 @@ def infer_primary_path(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
     preset_path = normalize_path(business_preset(brand).get("primary_path"))
     if preset_path:
         return preset_path
+    if not has_brand_context(brand):
+        return "sub"
     product_mode = str(brand.get("product_mode") or "").strip().lower()
     raw_offer = str(brand.get("offer") or "")
     offer = "" if raw_offer == DEFAULT_BRAND["offer"] else raw_offer.lower()
@@ -410,7 +428,8 @@ def infer_primary_path(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
     if product_mode in ("true", "yes", "1", "on") or any(term in f"{offer} {industry}" for term in ("shopify", "ecommerce", "e-commerce", "dtc", "product", "cleaner", "device", "tool", "bottle")):
         return "click"
     blob = " ".join(video_text(video) for video in top)
-    if "apply" in blob:
+    title_blob = " ".join(str(video.get("title") or "") for video in top).lower()
+    if has_word(title_blob, ("apply", "application", "applications")):
         return "apply"
     if has_word(blob, ("checkout", "buy", "code", "shop")):
         return "buy"
@@ -479,10 +498,12 @@ def infer_spine(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: List
 
 def channel_topic(spine: Dict[str, Any]) -> str:
     text = f"{spine.get('avatar', '')} {spine.get('promise', '')}".lower()
-    if any(token in text for token in ("mess", "clean", "cleanup", "dirty", "drain")):
-        return "cleaning"
+    if any(token in text for token in ("claude", "codex", "agent", "workflow", "workflows", "tools", "ai tools")):
+        return "ai_tools"
     if any(token in text for token in ("startup", "founder", "saas", "ai", "funding")):
         return "startup"
+    if any(token in text for token in ("mess", "clean", "cleanup", "dirty", "drain")):
+        return "cleaning"
     if any(token in text for token in ("product", "tool", "buyer")):
         return "product"
     if any(token in text for token in ("game", "gaming")):
@@ -534,6 +555,15 @@ def filled_hooks_for_template(template: str, spine: Dict[str, Any], tag: str) ->
             "Challenge": ["Can I clean this before the baby wakes up?", "Can I finish this room before the timer ends?"],
             "Narrative": ["I found something disgusting in a normal sink.", "This looked clean until I checked closer."],
             "Social Proof": ["Watch my family react to what came out of this drain.", "The owner did not think this would work."],
+        }
+    elif topic == "ai_tools":
+        examples = {
+            "Curiosity": ["Why does this Claude setup work so much better?", "What changes when your notes become agent memory?"],
+            "Spectacle": ["This tiny markdown file 10x'd the whole workflow.", "I connected one tool and the agent got scary useful."],
+            "Transformation": ["I turned scattered notes into an AI operating system.", "This workflow went from manual to agent-run fast."],
+            "Challenge": ["Can I build this agent workflow in under a minute?", "Can this setup replace the annoying manual step?"],
+            "Narrative": ["Most people use Claude like chat. This is the upgrade.", "I did not get agents until I tried this workflow."],
+            "Social Proof": ["Watch how builders are turning notes into agents.", "Here is the setup serious AI operators keep using."],
         }
     elif topic == "startup":
         examples = {
@@ -612,6 +642,7 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
         reason = {
             "cleaning": "the next gross cleaning test",
             "startup": "the next founder breakdown",
+            "ai_tools": "the next AI workflow test",
             "product": "the next real product test",
             "gaming": "the next challenge run",
         }.get(topic, "the next test")
