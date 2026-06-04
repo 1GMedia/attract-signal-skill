@@ -22,7 +22,7 @@ metadata:
 
 ## Overview
 
-This skill turns YouTube Shorts channels into reusable content-intelligence briefs. It is designed for competitive/trend research where the user wants to find high-performing Shorts, understand why they worked, and translate the underlying signal into original brand strategy without copying the original. It is industry-agnostic by default: do not assume tattoo, beauty, SaaS, local services, restaurants, ecommerce, coaching, fitness, or any other niche unless the user provides that context.
+This skill turns short-form content sources into reusable content-intelligence briefs. It supports YouTube Shorts, TikTok, Instagram Reels, X video, and other short-form exports. It is designed for competitive/trend research where the user wants to find high-performing short-form content, understand why it worked, and translate the underlying signal into original brand strategy without copying the original. It is industry-agnostic by default: do not assume tattoo, beauty, SaaS, local services, restaurants, ecommerce, coaching, fitness, or any other niche unless the user provides that context.
 
 This is a portable skill for Hermes, Codex, and Claude. Keep the workflow agent-neutral: local Markdown and CSV outputs are universal; Google Docs/Sheets publishing is an optional enhancement when `gogcli` is installed and authenticated.
 
@@ -38,7 +38,7 @@ The standard threshold is **10,000+ likes**, but the user can change it. Always 
 
 Use this skill when the user asks to:
 
-- Scan one or more YouTube channels' Shorts for winners.
+- Scan one or more short-form sources for winners, including YouTube Shorts channels and normalized TikTok, Instagram Reels, X video, or platform exports.
 - Filter Shorts by likes/views/engagement.
 - Analyze hooks, visual hooks, formats, content trends, and transcript patterns.
 - Create a signal and trend breakdown that can become original scripts, shot lists, Google Docs, or storyboards.
@@ -355,7 +355,7 @@ Choose one or more:
 After individual analyses, make a channel/trend brief:
 
 ```markdown
-# YouTube Shorts Trend Brief: <channel>
+# Short-Form Content Signal Brief: <source/channel>
 
 ## Strategy Spine
 - Avatar: <primary viewer and optional secondary viewer>
@@ -450,7 +450,7 @@ python3 $SKILL_DIR/scripts/publish_doc.py \
 Direct `gogcli` flow for the current `gog` CLI:
 
 ```bash
-gog docs create "YouTube Shorts Trend Brief - <Channel>" --file brief.md --json
+gog docs create "Short-Form Signal Brief - <Channel>" --file brief.md --json
 # parse the returned doc ID, then verify the created file:
 gog drive get <docId> --json --select id,name,mimeType,webViewLink,owners
 ```

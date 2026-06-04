@@ -1,6 +1,6 @@
 # Attract Signal Skill
 
-A shareable Hermes, Codex, and Claude skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, repeatable hooks, proof/meat types, CTA paths, visual mechanics, source citations, and 14-day content test sprints.
+A shareable Hermes, Codex, and Claude skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, TikTok, Instagram Reels, X video, and other short-form content; repeatable hooks, proof/meat types, CTA paths, visual mechanics, source citations, and 14-day content test sprints.
 
 Default example channel:
 

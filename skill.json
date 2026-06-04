@@ -1,6 +1,6 @@
 {
   "name": "attract-signal",
-  "description": "Portable Hermes/Codex/Claude skill for scanning YouTube Shorts winners, analyzing hooks/trends/transcripts, and turning content signals into original brand-safe content strategy with citations.",
+  "description": "Portable Hermes/Codex/Claude skill for short-form content signals across YouTube Shorts, TikTok, Instagram Reels, X video, and exports; analyzes hooks/trends/transcripts and turns signals into original brand-safe content strategy with citations.",
   "skill_path": "skills/media/attract-signal",
   "install_targets": {
     "hermes": "~/.hermes/skills/media/attract-signal",
