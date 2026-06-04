@@ -285,6 +285,19 @@ def infer_spine(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: List
     }
 
 
+def channel_topic(spine: Dict[str, Any]) -> str:
+    text = f"{spine.get('avatar', '')} {spine.get('promise', '')}".lower()
+    if any(token in text for token in ("mess", "clean", "cleanup", "dirty", "drain")):
+        return "cleaning"
+    if any(token in text for token in ("startup", "founder", "saas", "ai", "funding")):
+        return "startup"
+    if any(token in text for token in ("product", "tool", "buyer")):
+        return "product"
+    if any(token in text for token in ("game", "gaming")):
+        return "gaming"
+    return "general"
+
+
 def hook_pattern_tag(video: Dict[str, Any]) -> str:
     title = str(video.get("title") or "")
     lower = title.lower()
@@ -319,6 +332,48 @@ def hook_template(video: Dict[str, Any]) -> str:
     return "[Plain-language premise] with a visible payoff by the end."
 
 
+def filled_hooks_for_template(template: str, spine: Dict[str, Any], tag: str) -> List[str]:
+    topic = channel_topic(spine)
+    if topic == "cleaning":
+        examples = {
+            "Curiosity": ["How filthy is your shower drain really?", "How dirty is your kid's favorite stuffed animal?"],
+            "Spectacle": ["When hair clogs the sink, try this gross pull test.", "When the drain fights back, watch what comes out."],
+            "Transformation": ["I turned this crusty sink into a mirror in 20 minutes.", "I cleaned the grossest corner of this bathroom."],
+            "Challenge": ["Can I clean this before the baby wakes up?", "Can I finish this room before the timer ends?"],
+            "Narrative": ["I found something disgusting in a normal sink.", "This looked clean until I checked closer."],
+            "Social Proof": ["Watch my family react to what came out of this drain.", "The owner did not think this would work."],
+        }
+    elif topic == "startup":
+        examples = {
+            "Curiosity": ["Why are AI startups moving faster than SaaS?", "What does an AI-native company do differently?"],
+            "Spectacle": ["OpenAI is giving YC companies a huge unfair advantage.", "This startup shift is wiping out old software moats."],
+            "Transformation": ["I turned one founder lesson into a 30-second playbook.", "This is how a startup idea becomes obvious."],
+            "Challenge": ["Can your startup explain its moat in one sentence?", "Can you spot the next AI-native wedge?"],
+            "Narrative": ["The best founders are changing how companies think.", "Everyone is missing this startup pattern."],
+            "Social Proof": ["Watch how top founders explain the same shift.", "Here is what the strongest YC companies have in common."],
+        }
+    elif topic == "product":
+        examples = {
+            "Curiosity": ["Does this tool actually solve the annoying part?", "What happens when this product gets stress-tested?"],
+            "Spectacle": ["This tiny tool changed the whole result.", "I pushed this product until it failed."],
+            "Transformation": ["I used this tool to fix the before state fast.", "This product turned a messy process into one step."],
+            "Challenge": ["Can this product solve it in under 30 seconds?", "Can the cheap version beat the expensive one?"],
+            "Narrative": ["I did not expect this product to work this well.", "This looked like a gimmick until the result."],
+            "Social Proof": ["Watch a first-time user react to the result.", "The customer noticed the difference immediately."],
+        }
+    else:
+        examples = {
+            "Curiosity": ["What happens if you test this the hard way?", "How different is the result when you try this?"],
+            "Spectacle": ["This simple test gets out of hand fast.", "Watch what happens when the stakes go up."],
+            "Transformation": ["I turned the before state into a clear result.", "This went from messy to obvious fast."],
+            "Challenge": ["Can this work before the timer ends?", "Can I get the result in one take?"],
+            "Narrative": ["I did not expect this to happen.", "This started normal and got weird fast."],
+            "Social Proof": ["Watch their reaction to the final result.", "They did not believe it until they saw it."],
+        }
+    fallback = examples.get(tag) or examples["Narrative"]
+    return fallback[:2]
+
+
 def adjacent_hooks(entry: Dict[str, Any], spine: Dict[str, Any]) -> List[str]:
     template = entry["template"]
     avatar = spine["avatar"]
@@ -342,6 +397,7 @@ def build_hook_library(top: List[Dict[str, Any]], transcripts: Dict[str, Dict[st
             "pattern_tag": hook_pattern_tag(video),
             "meat_type": infer_meat_type(video),
         }
+        entry["filled_hooks"] = filled_hooks_for_template(entry["template"], spine, entry["pattern_tag"])
         winners.append(entry)
     adjacent: List[Dict[str, Any]] = []
     for entry in winners[:5]:
@@ -355,18 +411,45 @@ def build_hook_library(top: List[Dict[str, Any]], transcripts: Dict[str, Dict[st
     return {"winners": winners, "adjacent": adjacent[:5]}
 
 
-def cta_for_path(path: str, promise: str) -> str:
+def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
+    topic = channel_topic(spine)
     normalized = path.lower().strip()
-    clean_promise = promise.rstrip(".")
-    promise_fragment = clean_promise[:1].lower() + clean_promise[1:] if clean_promise else "the promised outcome"
-    library = {
-        "sub": f"Subscribe so you do not miss the next test: {clean_promise}.",
-        "click": f"Tap the link in the description for the next step: {clean_promise}.",
-        "opt_in": f"Comment 'SIGNAL' and the next step is a DM with the checklist for {promise_fragment}.",
-        "buy": f"Use code SIGNAL at checkout today to try the product behind {promise_fragment}.",
-        "apply": f"Apply when you are ready; use the link in the description to take the next step toward {promise_fragment}.",
-    }
-    return library.get(normalized, library["sub"])
+    if normalized == "sub":
+        reason = {
+            "cleaning": "the next gross cleaning test",
+            "startup": "the next founder breakdown",
+            "product": "the next real product test",
+            "gaming": "the next challenge run",
+        }.get(topic, "the next test")
+        return [
+            {"id": "cta_sub_1", "text": f"Subscribe for {reason}."},
+            {"id": "cta_sub_2", "text": "Subscribe. I am testing the next one tomorrow."},
+        ]
+    if normalized == "click":
+        return [
+            {"id": "cta_click_1", "text": "Tap the link for the full breakdown."},
+            {"id": "cta_click_2", "text": "Link is in the description if you want the next step."},
+        ]
+    if normalized == "opt_in":
+        return [
+            {"id": "cta_optin_1", "text": "Comment SIGNAL and I will send the checklist."},
+            {"id": "cta_optin_2", "text": "Comment TEST if you want the template."},
+        ]
+    if normalized == "buy":
+        return [
+            {"id": "cta_buy_1", "text": "Use code SIGNAL if you want to try it."},
+            {"id": "cta_buy_2", "text": "Grab it today while the test is fresh."},
+        ]
+    if normalized == "apply":
+        return [
+            {"id": "cta_apply_1", "text": "Apply when you are ready."},
+            {"id": "cta_apply_2", "text": "Application link is in the description."},
+        ]
+    return [{"id": "cta_default_1", "text": "Follow for the next test."}]
+
+
+def cta_by_id(ctas: List[Dict[str, str]]) -> Dict[str, str]:
+    return {cta["id"]: cta["text"] for cta in ctas}
 
 
 def style_adjustment(channel_style: str) -> str:
@@ -377,31 +460,40 @@ def style_adjustment(channel_style: str) -> str:
     }.get(channel_style, "Match the channel's native framing while preserving hook, proof, payoff, CTA.")
 
 
-def strategy_angle(video: Dict[str, Any], brand: Dict[str, Any]) -> str:
-    trend = infer_trend(video)
-    industry = brand.get("industry") or "your industry"
-    offer = brand.get("offer") or "your offer"
-    if "transformation" in trend:
-        return f"Show a visible before/after transformation around {offer} in {industry}."
-    if "challenge" in trend:
-        return f"Create a simple progress challenge where {brand.get('audience')} can understand the goal in one second."
-    if "problem-solution" in trend:
-        return f"Name a common pain point, solve it quickly, and tie the proof back to {offer}."
-    if "product demo" in trend:
-        return f"Demonstrate {offer} with one clear visual proof point and no overexplaining."
-    return f"Translate the source's hook mechanics into a brand-safe premise for {industry}."
+def style_id(channel_style: str) -> str:
+    return {
+        "face_led": "style_face_1",
+        "product_led": "style_product_1",
+        "faceless": "style_faceless_1",
+    }.get(channel_style, "style_custom_1")
 
 
-def concept_title(video: Dict[str, Any], brand: Dict[str, Any], index: int) -> str:
-    industry = brand.get("industry") or "your industry"
+def style_library(channel_style: str) -> Dict[str, str]:
+    sid = style_id(channel_style)
+    return {sid: style_adjustment(channel_style)}
+
+
+def creator_hook_line(hook_entry: Dict[str, Any], index: int = 0) -> str:
+    filled = hook_entry.get("filled_hooks") or []
+    if filled:
+        return filled[index % len(filled)]
+    return str(hook_entry.get("raw_hook") or hook_entry.get("template") or "Start with the winning hook.")
+
+
+def concept_title(video: Dict[str, Any], brand: Dict[str, Any], spine: Dict[str, Any], index: int) -> str:
+    subject = brand.get("industry")
+    if not subject or subject == DEFAULT_BRAND["industry"]:
+        subject = spine.get("promise") or "This Channel"
     trend = infer_trend(video).split("/")[0].strip()
-    return f"Concept {index}: {trend.title()} Signal for {industry.title()}"
+    return f"Concept {index}: {trend.title()} Signal for {str(subject).title()}"
 
 
 def build_sprint_rows(hook_library: Dict[str, List[Dict[str, Any]]], spine: Dict[str, Any], days: int = 14) -> List[Dict[str, str]]:
     rows: List[Dict[str, str]] = []
     winners = hook_library.get("winners") or []
     adjacent = hook_library.get("adjacent") or []
+    ctas = cta_variants(spine["primary_path"], spine)
+    sid = style_id(spine["channel_style"])
     if not winners:
         return rows
     for day in range(1, days + 1):
@@ -409,6 +501,7 @@ def build_sprint_rows(hook_library: Dict[str, List[Dict[str, Any]]], spine: Dict
             hook = winners[(day - 1) % len(winners)]
             test_type = "70% proven winner"
             hook_template_value = hook["template"]
+            script_line = creator_hook_line(hook, day - 1)
             source_url = hook["source_url"]
             pattern_tag = hook["pattern_tag"]
             meat_type = hook["meat_type"]
@@ -416,12 +509,15 @@ def build_sprint_rows(hook_library: Dict[str, List[Dict[str, Any]]], spine: Dict
             hook = adjacent[(day - 11) % len(adjacent)]
             test_type = "20% winner-adjacent"
             hook_template_value = hook["hook"]
+            base = winners[(day - 11) % len(winners)]
+            script_line = creator_hook_line(base, 1)
             source_url = hook["source_url"]
             pattern_tag = hook["pattern_tag"]
             meat_type = spine["meats"][(day - 1) % len(spine["meats"])]
         else:
             test_type = "10% new experiment"
             hook_template_value = "What if [avatar] could get [promise/payoff] under [new constraint]?"
+            script_line = "What if this works better than the obvious way?"
             source_url = winners[(day - 1) % len(winners)]["source_url"]
             pattern_tag = "Challenge"
             meat_type = spine["meats"][(day - 1) % len(spine["meats"])]
@@ -429,11 +525,12 @@ def build_sprint_rows(hook_library: Dict[str, List[Dict[str, Any]]], spine: Dict
             "day": str(day),
             "test_type": test_type,
             "hook_template": hook_template_value,
+            "script_line_0_2": script_line,
             "pattern_tag": pattern_tag,
             "meat_type": meat_type,
-            "channel_style_adjustment": style_adjustment(spine["channel_style"]),
+            "style_id": sid,
             "primary_path": spine["primary_path"],
-            "cta": cta_for_path(spine["primary_path"], spine["promise"]),
+            "cta_variant_id": ctas[(day - 1) % len(ctas)]["id"],
             "source_url": source_url,
         })
     return rows
@@ -468,11 +565,11 @@ def discovery_note(video: Dict[str, Any]) -> str:
     return raw.get("notes") or video.get("notes") or video.get("signal_reason") or "Discovery/profile row; performance metrics were not supplied."
 
 
-def thumbnail_concept(video: Dict[str, Any], brand: Dict[str, Any]) -> str:
+def thumbnail_concept(video: Dict[str, Any], brand: Dict[str, Any], spine: Optional[Dict[str, Any]] = None) -> str:
     hook = infer_hook(video)
-    industry = brand.get("industry") or "your industry"
+    subject = (spine or {}).get("promise") or brand.get("industry") or "the channel promise"
     if "transformation" in hook:
-        return f"Split-frame before/after result in {industry}; big contrast, 3-5 word overlay, proof visible."
+        return f"Split-frame before/after result tied to {subject}; big contrast, 3-5 word overlay, proof visible."
     if "countdown" in hook or "specificity" in hook:
         return "Large number/progress cue, expressive reaction, simple high-contrast background."
     if "tension" in hook:
@@ -487,11 +584,12 @@ def write_calendar(path: Path, rows: List[Dict[str, str]]) -> None:
             "day",
             "test_type",
             "hook_template",
+            "script_line_0_2",
             "pattern_tag",
             "meat_type",
-            "channel_style_adjustment",
+            "style_id",
             "primary_path",
-            "cta",
+            "cta_variant_id",
             "source_url",
         ])
         writer.writeheader()
@@ -594,6 +692,9 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     keywords = top_keywords(top)
     spine = infer_spine(top, brand, keywords)
     hook_library = build_hook_library(top, transcripts, spine)
+    ctas = cta_variants(spine["primary_path"], spine)
+    cta_lookup = cta_by_id(ctas)
+    styles = style_library(spine["channel_style"])
     lines: List[str] = []
     lines.append(f"# Attract Signal Strategy Report: {brand.get('brand_name', 'Your Brand')}")
     lines.append("")
@@ -615,6 +716,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
         lines.append("- Metric-less social profile discoveries are listed separately and not treated as performance winners.")
     lines.append("- Recommendations are normalized around Avatar, Promise, Proof, and Path so the same engine works across face-led, product-led, and faceless channels.")
     lines.append("- The 14-day sprint uses a 70/20/10 testing mix: proven hooks, winner-adjacent variations, then one new experiment.")
+    lines.append("- In the next 2 hours: batch-film the 14 sprint hooks below, post 1/day, log watch time plus path conversions, then feed winners back into the next scan.")
     if keywords:
         lines.append(f"- Repeated language signals: {', '.join(keywords)}.")
     lines.append("")
@@ -632,11 +734,12 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("")
     lines.append("### Top 5 Winning Hooks")
     lines.append("")
-    lines.append("| Rank | Raw hook | Template | Pattern tag | Meat | Source |")
-    lines.append("|---:|---|---|---|---|---|")
+    lines.append("| Rank | Raw hook | Template | Ready-to-read hooks | Pattern tag | Meat | Source |")
+    lines.append("|---:|---|---|---|---|---|---|")
     for index, hook in enumerate(hook_library["winners"], 1):
+        filled = "<br>".join(md_escape(line) for line in (hook.get("filled_hooks") or []))
         lines.append(
-            f"| {index} | {md_escape(hook['raw_hook'])} | {md_escape(hook['template'])} | "
+            f"| {index} | {md_escape(hook['raw_hook'])} | {md_escape(hook['template'])} | {filled} | "
             f"{md_escape(hook['pattern_tag'])} | {md_escape(hook['meat_type'])} | [source]({hook['source_url']}) |"
         )
     lines.append("")
@@ -652,9 +755,12 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("## Meats, Style, And CTA System")
     lines.append("")
     lines.append(f"- Primary meats: {', '.join(spine['meats'])}.")
-    lines.append(f"- Channel style: `{spine['channel_style']}`. {style_adjustment(spine['channel_style'])}")
+    lines.append(f"- Channel style: `{spine['channel_style']}`.")
+    for sid, note in styles.items():
+        lines.append(f"- `{sid}`: {note}")
     lines.append(f"- Primary path: `{spine['primary_path']}`.")
-    lines.append(f"- Modular CTA: {cta_for_path(spine['primary_path'], spine['promise'])}")
+    for cta in ctas:
+        lines.append(f"- `{cta['id']}`: {cta['text']}")
     lines.append("- Script structure: Hook from library -> Meat -> Payoff -> CTA.")
     lines.append("")
     lines.append("## Top Signals")
@@ -667,7 +773,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
             f"| {index} | [{md_escape(video.get('title') or video.get('id'))}]({video.get('source_url')}) | "
             f"{fmt_num(score)} | {fmt_num(video.get('view_count'))} | {fmt_num(video.get('like_count'))} | "
             f"{fmt_num(video.get('comment_count'))} | {md_escape(video.get('cross_channel_signal_reason') or video.get('signal_reason'))} | "
-            f"{md_escape(hook_template(video))} -> {md_escape(infer_meat_type(video))} -> {md_escape(cta_for_path(spine['primary_path'], spine['promise']))} |"
+            f"{md_escape(hook_template(video))} -> {md_escape(infer_meat_type(video))} -> {md_escape(ctas[0]['id'])} |"
         )
     lines.append("")
     if discovery_items:
@@ -742,42 +848,45 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("## Brand Strategy Opportunities")
     lines.append("")
     for index, video in enumerate(top[:5], 1):
-        lines.append(f"### {concept_title(video, brand, index)}")
+        hook_entry = hook_library["winners"][index - 1] if index - 1 < len(hook_library["winners"]) else {}
+        lines.append(f"### {concept_title(video, brand, spine, index)}")
         lines.append("")
         lines.append(f"- Source inspiration: {video.get('source_url')}")
-        lines.append(f"- Hook template: {hook_template(video)}")
+        lines.append(f"- `script_line_0_2`: {creator_hook_line(hook_entry, 0)}")
+        lines.append(f"- `builder_note`: Based on template `{hook_template(video)}` and pattern `{hook_pattern_tag(video)}`.")
         lines.append(f"- Pattern tag: {hook_pattern_tag(video)}")
         lines.append(f"- Meat: {infer_meat_type(video)}")
-        lines.append(f"- 0-2s hook: Adapt the template for {spine['avatar']}.")
-        lines.append(f"- Script beat: hook, {infer_meat_type(video).lower()} meat, payoff, then `{spine['primary_path']}` CTA.")
+        lines.append(f"- Script beat: hook, {infer_meat_type(video).lower()} meat, payoff, then `{ctas[0]['id']}`.")
         lines.append(f"- Avoid copying: do not reuse the source creator's exact premise, wording, setting, or edit sequence.")
         lines.append("")
     lines.append("## Script Drafts")
     lines.append("")
     for index, video in enumerate(top[:3], 1):
-        lines.append(f"### Script {index}: {concept_title(video, brand, index)}")
+        hook_entry = hook_library["winners"][index - 1] if index - 1 < len(hook_library["winners"]) else {}
+        cta = ctas[(index - 1) % len(ctas)]
+        lines.append(f"### Script {index}: {concept_title(video, brand, spine, index)}")
         lines.append("")
-        lines.append(f"- Hook: Use template `{hook_template(video)}` for {spine['avatar']}.")
-        lines.append(f"- Meat: {infer_meat_type(video)} proof that supports `{spine['promise']}`.")
-        lines.append("- Payoff: Show the result, lesson, or reversal clearly before the final beat.")
-        lines.append(f"- CTA: {cta_for_path(spine['primary_path'], spine['promise'])}")
-        lines.append(f"- Style adjustment: {style_adjustment(spine['channel_style'])}")
+        lines.append(f"- `script_line_0_2`: {creator_hook_line(hook_entry, 0)}")
+        lines.append(f"- `script_line_meat`: Show the {infer_meat_type(video).lower()} proof fast, then make the payoff visible.")
+        lines.append("- `script_line_payoff`: Here is the part that makes the result worth the watch.")
+        lines.append(f"- `script_line_cta`: {cta['text']}")
+        lines.append(f"- `builder_note`: Template `{hook_template(video)}`, pattern `{hook_pattern_tag(video)}`, meat `{infer_meat_type(video)}`, style `{style_id(spine['channel_style'])}`.")
         lines.append(f"- Source reference: {video.get('source_url')}")
         lines.append("")
     lines.append("## Shot Lists")
     lines.append("")
     lines.append("| Shot | Duration | Structure | Framing | Action | Notes |")
     lines.append("|---:|---:|---|---|---|---|")
-    lines.append(f"| 1 | 0-2s | Hook | style-specific first frame | Use a winning hook template | {style_adjustment(spine['channel_style'])} |")
+    lines.append(f"| 1 | 0-2s | Hook | style-specific first frame | Use a winning ready-to-read hook | {style_id(spine['channel_style'])}: {style_adjustment(spine['channel_style'])} |")
     lines.append(f"| 2 | 2-8s | Meat | proof-first shot | Deliver {spine['meats'][0].lower()} evidence | Keep the promise visible. |")
     lines.append(f"| 3 | 8-18s | Meat | sequence cuts | Add {spine['meats'][1].lower()} support | Escalate stakes or clarity. |")
     lines.append("| 4 | 18-25s | Payoff | reveal/result frame | Show the result, lesson, or reversal | Make the value obvious without context. |")
-    lines.append(f"| 5 | 25-30s | CTA | final frame | {cta_for_path(spine['primary_path'], spine['promise'])} | Define what to do, how, when, what they get, and what happens next. |")
+    lines.append(f"| 5 | 25-30s | CTA | final frame | Use `{ctas[0]['id']}` or `{ctas[-1]['id']}` | Define what to do, how, when, what they get, and what happens next. |")
     lines.append("")
     lines.append("## Thumbnail Concepts")
     lines.append("")
     for index, video in enumerate(top[:5], 1):
-        lines.append(f"- {index}. {thumbnail_concept(video, brand)} Source: {video.get('source_url')}")
+        lines.append(f"- {index}. {thumbnail_concept(video, brand, spine)} Source: {video.get('source_url')}")
     lines.append("")
     lines.append("## Storyboard Prompts")
     lines.append("")
@@ -799,13 +908,14 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append("")
     lines.append("## 14-Day Sprint Matrix")
     lines.append("")
-    lines.append("| Day | Test mix | Hook template | Pattern tag | Meat | Channel style adjustment | Path / CTA | Source |")
-    lines.append("|---:|---|---|---|---|---|---|---|")
+    lines.append("| Day | Test mix | Hook template | Script line 0-2s | Pattern tag | Meat | Style | CTA | Source |")
+    lines.append("|---:|---|---|---|---|---|---|---|---|")
     for row in build_sprint_rows(hook_library, spine, 14):
+        cta_text = cta_lookup.get(row["cta_variant_id"], row["cta_variant_id"])
         lines.append(
-            f"| {row['day']} | {md_escape(row['test_type'])} | {md_escape(row['hook_template'])} | "
-            f"{md_escape(row['pattern_tag'])} | {md_escape(row['meat_type'])} | {md_escape(row['channel_style_adjustment'])} | "
-            f"{md_escape(row['primary_path'])}: {md_escape(row['cta'])} | [source]({row['source_url']}) |"
+            f"| {row['day']} | {md_escape(row['test_type'])} | {md_escape(row['hook_template'])} | {md_escape(row['script_line_0_2'])} | "
+            f"{md_escape(row['pattern_tag'])} | {md_escape(row['meat_type'])} | {md_escape(row['style_id'])} | "
+            f"{md_escape(row['cta_variant_id'])}: {md_escape(cta_text)} | [source]({row['source_url']}) |"
         )
     return "\n".join(lines) + "\n"
 

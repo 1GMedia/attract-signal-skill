@@ -304,6 +304,7 @@ After individual analyses, make a channel/trend brief:
 ## Hook Library
 - Top 5 raw hooks:
 - Generalized hook templates:
+- 2 ready-to-read hook lines for each top template:
 - Winner-adjacent variations:
 - Pattern tags: Curiosity, Challenge, Spectacle, Transformation, Social Proof, Narrative
 
@@ -317,7 +318,7 @@ After individual analyses, make a channel/trend brief:
 ## Meats, Style, And CTA System
 - Primary meats:
 - Channel style adjustment:
-- CTA family by path:
+- Short CTA variants by path, with IDs like `cta_sub_1` or `cta_apply_1`:
 
 ## Script Drafts
 For each concept:
@@ -331,8 +332,8 @@ For each concept:
 - Source inspiration links
 
 ## 14-Day Sprint Matrix
-| Day | Test mix | Hook template | Pattern tag | Meat | Channel style adjustment | Path / CTA | Source |
-|---:|---|---|---|---|---|---|---|
+| Day | Test mix | Hook template | Script line 0-2s | Pattern tag | Meat | Style ID | CTA variant ID | Source |
+|---:|---|---|---|---|---|---|---|---|
 
 ## Shot Lists
 For each concept:
@@ -435,10 +436,10 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal
 - [ ] Transcript status is recorded for every video.
 - [ ] Individual breakdowns include trend type, hook, visual hooks, and signal pattern.
 - [ ] Channel-level synthesis starts with Avatar, Promise, Proof, and Path.
-- [ ] Hook library includes raw hooks, templates, pattern tags, and winner-adjacent variants.
-- [ ] Script and shot-list sections use Hook -> Meat -> Payoff -> CTA.
+- [ ] Hook library includes raw hooks, templates, ready-to-read hook lines, pattern tags, and winner-adjacent variants.
+- [ ] Script and shot-list sections use creator-facing script lines plus builder notes for Hook -> Meat -> Payoff -> CTA.
 - [ ] Reports stay industry-agnostic unless the user supplies brand context.
-- [ ] 14-day sprint matrix uses 70/20/10 and includes source links.
+- [ ] 14-day sprint matrix uses 70/20/10, compact style/CTA IDs, `script_line_0_2`, and source links.
 - [ ] Thumbnail concepts and storyboard/image-generation prompts avoid copying source creators.
 - [ ] Non-YouTube platform data came from user-provided exports and is labeled by platform.
 - [ ] Reusable signal library updates are local unless the user explicitly asks to share/export them.

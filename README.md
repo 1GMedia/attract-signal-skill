@@ -18,10 +18,10 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 - Supports `--cookies-from-browser` / `--cookies` for YouTube sign-in or bot checks.
 - Produces JSON, local Markdown, Google Doc, and CSV strategy artifacts.
 - Normalizes every report into Avatar, Promise, Proof, and Path, even when `brand.yaml` is missing.
-- Makes the hook library the center of the report with raw hooks, reusable templates, pattern tags, and winner-adjacent variations.
+- Makes the hook library the center of the report with raw hooks, reusable templates, ready-to-read hook lines, pattern tags, and winner-adjacent variations.
 - Guides the agent to fetch transcripts, analyze hooks and visual hooks, and turn content signals into original brand-safe strategy tests for any industry.
 - Generates thumbnail concepts, storyboard prompts, image-generation direction, and source-cited script/shot-list templates.
-- Generates a 14-day sprint matrix using a 70/20/10 mix of proven hooks, winner-adjacent hooks, and new experiments.
+- Generates a 14-day sprint matrix using a 70/20/10 mix of proven hooks, winner-adjacent hooks, and new experiments, with compact style/CTA IDs.
 - Maintains an optional local signal library for reusable pattern memory.
 - Creates a Google Docs copy by default through `gogcli` after the local Markdown report is written.
 - Supports optional Google Sheets calendar export through `gogcli`.
@@ -235,6 +235,13 @@ Build a reusable local signal library:
 ```bash
 python3 skills/media/attract-signal/scripts/signal_library.py add --signals ./signals.json --top-only
 python3 skills/media/attract-signal/scripts/signal_library.py search "challenge"
+```
+
+
+Sprint CSV columns include:
+
+```text
+day, test_type, hook_template, script_line_0_2, pattern_tag, meat_type, style_id, primary_path, cta_variant_id, source_url
 ```
 
 Creating the default Doc is part of the report workflow. Any sharing, permission changes, or edits to existing Docs should still be approved by the user first.
