@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.scan.json
+clean-girl-shorts.json
+youtube-shorts-report.json
+*.md.tmp
+clean-girl-shorts.md
+youtube-shorts-research/

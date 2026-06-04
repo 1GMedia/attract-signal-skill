@@ -1,0 +1,15 @@
+{
+  "name": "youtube-shorts-trend-recraft",
+  "description": "Hermes/Codex skill for scanning YouTube Shorts winners, analyzing hooks/trends/transcripts, and recrafting original brand-safe video concepts with citations.",
+  "skill_path": "skills/media/youtube-shorts-trend-recraft",
+  "default_channel": "https://www.youtube.com/@_The_Clean_Girl/shorts",
+  "requires": [
+    "python3",
+    "yt-dlp",
+    "youtube-transcript-api"
+  ],
+  "optional": [
+    "gogcli"
+  ]
+}
+
