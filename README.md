@@ -161,15 +161,17 @@ python3 skills/media/attract-signal/scripts/fetch_transcript.py \
 
 ```yaml
 brand_name: Example Brand
+business_type: service
+brand_url: https://example.com
 industry: local service business
 audience: busy homeowners who want trustworthy help
 offer: a clear, reliable service package
 tone: helpful, direct, practical, and warm
 proof_points:
   - before-and-after results
-primary_path: sub
-channel_style: face_led
-product_mode: false
+primary_path: ""
+channel_style: ""
+product_mode: ""
 product_name: ""
 product_url: ""
 discount_code: ""
@@ -209,6 +211,24 @@ Input contract:
 - Target brand context can be a website URL, product page URL, or `brand.yaml`.
 - If the target is a Shopify/product brand, verify the product page before naming the product, using claims, or writing CTAs.
 - If no target brand URL/config is provided, keep the report creator-style and generic rather than inventing a product.
+
+Minimal intake:
+
+1. Main website/store URL, optional but recommended.
+2. Business type: `creator`, `product_brand`, `service`, `b2b_saas`, `education`, or `other`.
+3. One-sentence viewer goal or offer.
+4. Avatar label, such as consumers, founders, developers, creators, or local buyers.
+5. Preferred channel style only when it cannot be inferred: `face_led`, `product_led`, or `faceless`.
+
+Business type presets set defaults only when the field is blank:
+
+| business_type | default path | default proof/meats | default style |
+| --- | --- | --- | --- |
+| `creator` | `sub` | Story + Demonstration | `face_led` |
+| `product_brand` | `click` | Demonstration + Testimonial | `product_led` |
+| `service` | `book_call` | Demonstration + Testimonial | `face_led` |
+| `b2b_saas` | `book_call` | Demonstration + Education | `face_led` |
+| `education` | `opt_in` | Education + Story | `face_led` |
 
 ## Google Docs Output
 
@@ -262,15 +282,13 @@ day, test_type, hook_template, script_line_0_2, pattern_tag, meat_type, product_
 For a Shopify or DTC product brand, set:
 
 ```yaml
-offer: drain cleaner bundle
+business_type: product_brand
+offer: Magic Foam cleaning foam
 product_name: Magic Foam
 product_url: https://gocleangirl.com/products/magic-foam
-primary_path: click
-channel_style: product_led
-product_mode: true
 ```
 
-That makes the report use product-led proof, short click/buy CTAs, product/faceless style options, and a sprint row that forces the meat to show product, application, and result. Product names, offer claims, URLs, and discount codes should come from `brand.yaml` or a verified product page, not from invented placeholders.
+That makes the report default to product-led proof, short click/buy CTAs, product/faceless style options, and a sprint row that forces the meat to show product, application, and result. Product names, offer claims, URLs, and discount codes should come from `brand.yaml` or a verified product page, not from invented placeholders.
 
 Creating the default Doc is part of the report workflow. Any sharing, permission changes, or edits to existing Docs should still be approved by the user first.
 

@@ -16,6 +16,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 DEFAULT_BRAND = {
     "brand_name": "Your Brand",
+    "business_type": "",
+    "brand_url": "",
     "industry": "your industry",
     "audience": "your target audience",
     "offer": "your offer, product, or service",
@@ -42,6 +44,81 @@ TREND_KEYWORDS = [
     ("social proof / results", ("result", "client", "customer", "reaction", "proof")),
     ("storytime / confession", ("story", "i was", "they said", "confession", "pov")),
 ]
+
+BUSINESS_TYPE_PRESETS = {
+    "creator": {
+        "label": "Creator / Influencer channel",
+        "primary_path": "sub",
+        "channel_style": "face_led",
+        "meats": ["Story", "Demonstration"],
+        "product_mode": False,
+    },
+    "product_brand": {
+        "label": "Product brand / ecommerce",
+        "primary_path": "click",
+        "channel_style": "product_led",
+        "meats": ["Demonstration", "Testimonial"],
+        "product_mode": True,
+    },
+    "service": {
+        "label": "Service / agency / local business",
+        "primary_path": "book_call",
+        "channel_style": "face_led",
+        "meats": ["Demonstration", "Testimonial"],
+        "product_mode": False,
+    },
+    "b2b_saas": {
+        "label": "B2B SaaS / software product",
+        "primary_path": "book_call",
+        "channel_style": "face_led",
+        "meats": ["Demonstration", "Education"],
+        "product_mode": False,
+    },
+    "education": {
+        "label": "Education / coaching / info",
+        "primary_path": "opt_in",
+        "channel_style": "face_led",
+        "meats": ["Education", "Story"],
+        "product_mode": False,
+    },
+    "other": {
+        "label": "Other / inferred",
+        "primary_path": "",
+        "channel_style": "",
+        "meats": [],
+        "product_mode": False,
+    },
+}
+
+BUSINESS_TYPE_ALIASES = {
+    "creator": "creator",
+    "influencer": "creator",
+    "influencer_channel": "creator",
+    "product": "product_brand",
+    "product_brand": "product_brand",
+    "ecom": "product_brand",
+    "ecomm": "product_brand",
+    "ecommerce": "product_brand",
+    "e-commerce": "product_brand",
+    "shopify": "product_brand",
+    "amazon": "product_brand",
+    "dtc": "product_brand",
+    "service": "service",
+    "services": "service",
+    "agency": "service",
+    "local": "service",
+    "local_business": "service",
+    "b2b": "b2b_saas",
+    "b2b_saas": "b2b_saas",
+    "saas": "b2b_saas",
+    "software": "b2b_saas",
+    "software_product": "b2b_saas",
+    "education": "education",
+    "coaching": "education",
+    "course": "education",
+    "info": "education",
+    "other": "other",
+}
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -86,6 +163,61 @@ def load_brand(path: Optional[Path]) -> Dict[str, Any]:
             brand[key] = [] if parsed == "" else parsed
     brand.setdefault("assumption_note", f"Brand context loaded from {path}.")
     return brand
+
+
+def normalize_business_type(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    key = re.sub(r"[^a-z0-9]+", "_", raw).strip("_")
+    direct = BUSINESS_TYPE_ALIASES.get(key) or BUSINESS_TYPE_ALIASES.get(raw)
+    if direct:
+        return direct
+    if any(term in raw for term in ("saas", "software", "b2b")):
+        return "b2b_saas"
+    if any(term in raw for term in ("shopify", "ecom", "e-commerce", "product", "dtc", "amazon")):
+        return "product_brand"
+    if any(term in raw for term in ("service", "agency", "local")):
+        return "service"
+    if any(term in raw for term in ("education", "coaching", "course", "info")):
+        return "education"
+    if any(term in raw for term in ("creator", "influencer")):
+        return "creator"
+    return "other"
+
+
+def business_preset(brand: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = normalize_business_type(brand.get("business_type"))
+    if not normalized:
+        return {}
+    return BUSINESS_TYPE_PRESETS.get(normalized, BUSINESS_TYPE_PRESETS["other"])
+
+
+def boolish(value: Any) -> Optional[bool]:
+    normalized = str(value or "").strip().lower()
+    if normalized in ("true", "yes", "1", "on"):
+        return True
+    if normalized in ("false", "no", "0", "off"):
+        return False
+    return None
+
+
+def normalize_path(value: Any) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+    aliases = {
+        "subscribe": "sub",
+        "follow": "sub",
+        "lead": "opt_in",
+        "lead_gen": "opt_in",
+        "optin": "opt_in",
+        "opt_in": "opt_in",
+        "demo": "book_call",
+        "book_demo": "book_call",
+        "book_call": "book_call",
+        "book_a_call": "book_call",
+        "call": "book_call",
+    }
+    return aliases.get(normalized, normalized)
 
 
 def fmt_num(value: Any) -> str:
@@ -249,6 +381,9 @@ def infer_channel_style(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str
     explicit = str(brand.get("channel_style") or "").strip()
     if explicit:
         return explicit
+    preset_style = str(business_preset(brand).get("channel_style") or "").strip()
+    if preset_style:
+        return preset_style
     blob = " ".join(video_text(video) for video in top)
     if has_word(blob, ("startup", "founder", "founders", "saas", "yc", "school", "apply")):
         return "face_led"
@@ -262,9 +397,12 @@ def infer_channel_style(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str
 
 
 def infer_primary_path(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
-    explicit = str(brand.get("primary_path") or brand.get("path") or "").strip().lower()
+    explicit = normalize_path(brand.get("primary_path") or brand.get("path"))
     if explicit:
         return explicit
+    preset_path = normalize_path(business_preset(brand).get("primary_path"))
+    if preset_path:
+        return preset_path
     product_mode = str(brand.get("product_mode") or "").strip().lower()
     raw_offer = str(brand.get("offer") or "")
     offer = "" if raw_offer == DEFAULT_BRAND["offer"] else raw_offer.lower()
@@ -284,11 +422,12 @@ def infer_primary_path(top: List[Dict[str, Any]], brand: Dict[str, Any]) -> str:
 
 
 def is_product_mode(brand: Dict[str, Any], primary_path: str, channel_style: str) -> bool:
-    explicit = str(brand.get("product_mode") or "").strip().lower()
-    if explicit in ("true", "yes", "1", "on"):
+    explicit = boolish(brand.get("product_mode"))
+    if explicit is not None:
+        return explicit
+    preset = business_preset(brand)
+    if preset.get("product_mode"):
         return True
-    if explicit in ("false", "no", "0", "off"):
-        return False
     raw_offer = str(brand.get("offer") or "")
     offer = "" if raw_offer == DEFAULT_BRAND["offer"] else raw_offer.lower()
     industry = str(brand.get("industry") or "").lower()
@@ -314,11 +453,16 @@ def product_label(brand: Dict[str, Any], spine: Dict[str, Any]) -> str:
 
 
 def infer_spine(top: List[Dict[str, Any]], brand: Dict[str, Any], keywords: List[str]) -> Dict[str, Any]:
-    meats = dominant_meats(top)
+    preset = business_preset(brand)
+    preset_meats = list(preset.get("meats") or [])
+    meats = preset_meats[:2] if preset_meats else dominant_meats(top)
     primary_path = infer_primary_path(top, brand)
     channel_style = infer_channel_style(top, brand)
     product_mode = is_product_mode(brand, primary_path, channel_style)
+    business_type = normalize_business_type(brand.get("business_type"))
     spine = {
+        "business_type": business_type or "inferred",
+        "business_type_label": str(preset.get("label") or "Inferred from source/channel context"),
         "avatar": infer_avatar(top, brand),
         "promise": infer_promise(top, brand, keywords),
         "proof": ", ".join(meats),
@@ -461,7 +605,7 @@ def build_hook_library(top: List[Dict[str, Any]], transcripts: Dict[str, Dict[st
 
 def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
     topic = channel_topic(spine)
-    normalized = path.lower().strip()
+    normalized = normalize_path(path)
     product = product_label({}, spine)
     discount_code = str(spine.get("discount_code") or "").strip()
     if normalized == "sub":
@@ -504,6 +648,11 @@ def cta_variants(path: str, spine: Dict[str, Any]) -> List[Dict[str, str]]:
         return [
             {"id": "cta_apply_1", "text": "Apply when you are ready."},
             {"id": "cta_apply_2", "text": "Application link is in the description."},
+        ]
+    if normalized == "book_call":
+        return [
+            {"id": "cta_book_call_1", "text": "Book the walkthrough if this solves your bottleneck."},
+            {"id": "cta_book_call_2", "text": "Grab a quick call from the link."},
         ]
     return [{"id": "cta_default_1", "text": "Follow for the next test."}]
 
@@ -555,11 +704,13 @@ def script_meat_line(video: Dict[str, Any], brand: Dict[str, Any], spine: Dict[s
 
 
 def conversion_tracking_note(spine: Dict[str, Any]) -> str:
-    path = spine["primary_path"]
+    path = normalize_path(spine["primary_path"])
     if path in ("click", "buy"):
         return "Track UTM sessions, add-to-carts, purchases, conversion rate, and revenue in Shopify for each sprint row."
     if path == "opt_in":
         return "Track comments/DM requests, opt-ins, qualified replies, and downstream booked calls or sales."
+    if path == "book_call":
+        return "Track booking link clicks, booked calls, qualified calls, show rate, and closed revenue by sprint row."
     if path == "apply":
         return "Track application link clicks, started applications, submitted applications, and qualified applicants."
     return "Track watch time, retention, follows/subs, comments, and saves for each sprint row."
@@ -800,6 +951,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append(f"- Promise: {spine['promise']}")
     lines.append(f"- Proof: {spine['proof']}")
     lines.append(f"- Path: {spine['primary_path']}")
+    lines.append(f"- Business type: {spine['business_type_label']}")
     lines.append(f"- Product mode: {'on' if spine.get('product_mode') else 'off'}")
     if spine.get("product_mode"):
         product_source = f" ({spine['product_url']})" if spine.get("product_url") else ""
@@ -830,6 +982,7 @@ def generate_report(signals: Dict[str, Any], brand: Dict[str, Any], top_n: int, 
     lines.append(f"| Promise | {md_escape(spine['promise'])} | Keep each short attached to the channel's reason to exist. |")
     lines.append(f"| Proof | {md_escape(spine['proof'])} | Use these as the two main meats after the hook. |")
     lines.append(f"| Path | {md_escape(spine['primary_path'])} | Pick CTAs from this path family instead of generic engagement asks. |")
+    lines.append(f"| Business type | {md_escape(spine['business_type_label'])} | This preset supplies defaults only when `brand.yaml` leaves path/style/product mode blank. |")
     lines.append(f"| Channel style | {md_escape(spine['channel_style'])} | {md_escape(style_adjustment(spine['channel_style']))} |")
     lines.append(f"| Product mode | {'on' if spine.get('product_mode') else 'off'} | {'Feature the product in the meat: show product, application, and result.' if spine.get('product_mode') else 'Use this when the brand needs click/buy content or product-led proof.'} |")
     if spine.get("product_mode") and spine.get("product_url"):

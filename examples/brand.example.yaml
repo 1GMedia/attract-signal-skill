@@ -1,4 +1,6 @@
 brand_name: Example Brand
+business_type: service
+brand_url: https://example.com
 industry: local service business
 audience: busy homeowners who want trustworthy help
 offer: a clear, reliable service package
@@ -7,9 +9,9 @@ proof_points:
   - before-and-after results
   - customer reactions
   - behind-the-scenes process
-primary_path: sub
-channel_style: face_led
-product_mode: false
+primary_path: ""
+channel_style: ""
+product_mode: ""
 product_name: ""
 product_url: ""
 discount_code: ""

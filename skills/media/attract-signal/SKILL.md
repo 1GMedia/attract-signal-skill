@@ -86,6 +86,26 @@ Target brand links:
 - Instagram/TikTok/YouTube accounts if available
 ```
 
+Then ask only the minimum strategy intake needed to set defaults:
+
+```text
+What is your main website or store URL? Optional, but if you skip this I will use more generic language.
+Which best describes you: creator, product_brand, service, b2b_saas, education, or other?
+In one sentence, what are you trying to get viewers to do or get?
+Who is this channel mainly for?
+If I cannot infer it: do you prefer face_led, product_led, or faceless videos?
+```
+
+Map `business_type` to internal defaults when the user does not provide explicit overrides:
+
+| business_type | default path | default proof/meats | default style |
+| --- | --- | --- | --- |
+| `creator` | `sub` | Story + Demonstration | `face_led` |
+| `product_brand` | `click` | Demonstration + Testimonial | `product_led` |
+| `service` | `book_call` | Demonstration + Testimonial | `face_led` |
+| `b2b_saas` | `book_call` | Demonstration + Education | `face_led` |
+| `education` | `opt_in` | Education + Story | `face_led` |
+
 The shortest acceptable prompt is:
 
 ```text
@@ -209,15 +229,17 @@ For brand-specific strategy, pass a simple `brand.yaml`:
 
 ```yaml
 brand_name: Example Brand
+business_type: service
+brand_url: https://example.com
 industry: local service business
 audience: busy homeowners who want trustworthy help
 offer: a clear, reliable service package
 tone: helpful, direct, practical, and warm
 proof_points:
   - before-and-after results
-primary_path: sub
-channel_style: face_led
-product_mode: false
+primary_path: ""
+channel_style: ""
+product_mode: ""
 product_name: ""
 product_url: ""
 discount_code: ""
