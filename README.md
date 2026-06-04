@@ -1,6 +1,6 @@
 # Attract Signal Skill
 
-A shareable Hermes/Codex skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, repeatable hooks, proof/meat types, CTA paths, visual mechanics, source citations, and 14-day content test sprints.
+A shareable Hermes, Codex, and Claude skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, repeatable hooks, proof/meat types, CTA paths, visual mechanics, source citations, and 14-day content test sprints.
 
 Default example channel:
 
@@ -46,20 +46,22 @@ If `gog` is not installed or authenticated, report generation still writes the l
 From this repository:
 
 ```bash
-./install.sh
+./install.sh hermes
+./install.sh codex
+./install.sh claude
+./install.sh all
 ```
 
-That copies:
+Install targets:
 
-```text
-skills/media/attract-signal
-```
+| target | install path |
+| --- | --- |
+| `hermes` | `~/.hermes/skills/media/attract-signal` |
+| `codex` | `~/.codex/skills/attract-signal` |
+| `claude` | `~/.claude/skills/attract-signal` |
+| `all` | installs the same skill folder to all three paths |
 
-to:
-
-```text
-~/.hermes/skills/media/attract-signal
-```
+The same `SKILL.md` and scripts are used everywhere. Local Markdown/CSV files are the universal outputs; Google Docs and Google Sheets publishing are optional `gogcli` enhancements.
 
 ## Run The Scanner Directly
 
@@ -185,7 +187,7 @@ forbidden_claims:
 
 ## Agent Usage
 
-After installation, ask Hermes/Codex:
+After installation, ask your agent:
 
 ```text
 Use attract-signal. Source inspiration: https://www.youtube.com/@_The_Clean_Girl/shorts. Target brand: https://kobeesco.com/. Build a 14-day product-led sprint with source citations.

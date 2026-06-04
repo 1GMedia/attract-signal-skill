@@ -2,12 +2,17 @@
 name: attract-signal
 description: "Use when scanning YouTube Shorts or short-form channels for content signals: high-performing videos, transcript/metadata citations, trend types, hooks, visual hooks, repeatable formats, and brand-specific content strategy briefs, scripts, shot lists, storyboards, or Google Docs."
 version: 1.0.0
-author: Hermes Agent
+author: 1GMedia
 license: MIT
 platforms: [linux, macos, windows]
 required_commands:
   - yt-dlp
 metadata:
+  portable_skill: true
+  install_targets:
+    hermes: ~/.hermes/skills/media/attract-signal
+    codex: ~/.codex/skills/attract-signal
+    claude: ~/.claude/skills/attract-signal
   hermes:
     tags: [youtube, shorts, trend-analysis, content-strategy, scriptwriting, citations]
     related_skills: [youtube-content, gogcli, google-workspace]
@@ -18,6 +23,8 @@ metadata:
 ## Overview
 
 This skill turns YouTube Shorts channels into reusable content-intelligence briefs. It is designed for competitive/trend research where the user wants to find high-performing Shorts, understand why they worked, and translate the underlying signal into original brand strategy without copying the original. It is industry-agnostic by default: do not assume tattoo, beauty, SaaS, local services, restaurants, ecommerce, coaching, fitness, or any other niche unless the user provides that context.
+
+This is a portable skill for Hermes, Codex, and Claude. Keep the workflow agent-neutral: local Markdown and CSV outputs are universal; Google Docs/Sheets publishing is an optional enhancement when `gogcli` is installed and authenticated.
 
 Default example channel for testing:
 
@@ -45,7 +52,7 @@ Don't use this for long-form YouTube summaries only; use `youtube-content` direc
 - Bundled `scripts/fetch_transcript.py` — fetches transcripts from individual Shorts or videos.
 - `youtube-content` — optional fallback transcript skill if already installed.
 - `gogcli` — preferred Google CLI for writing the default Google Docs copy (`brew install openclaw/tap/gogcli`).
-- `google-workspace` — existing Hermes Google Workspace fallback if `gog`/`gogcli` is not installed or not authenticated.
+- `google-workspace` — optional Google Workspace fallback if `gog`/`gogcli` is not installed or not authenticated and the host agent provides that skill/tool.
 - `image_generate` tool — use later to generate storyboard frames after the script/shot list is approved.
 
 ## Setup
@@ -63,9 +70,22 @@ brew install openclaw/tap/gogcli
 gog --version
 ```
 
-If Homebrew is unavailable, use the `google-workspace` skill or Docker install path from the `gogcli` skill.
+If Homebrew is unavailable, use a host-agent Google Workspace tool or Docker install path from the `gogcli` skill when available.
 
 The default report workflow writes a local Markdown file first, then creates a Google Doc copy with `gog docs create --file`. Reports should normalize every channel into Avatar, Promise, Proof, and Path, then build Hooks -> Meats -> CTAs -> 14-day tests. If `gog` is missing or unauthenticated, keep the local Markdown and tell the user exactly what failed. Use `--no-google-doc` only for local-only tests or CI.
+
+For shell examples, resolve the installed skill path once:
+
+```bash
+# Hermes
+export SKILL_DIR="${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal"
+
+# Codex
+export SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/attract-signal"
+
+# Claude Code
+export SKILL_DIR="$HOME/.claude/skills/attract-signal"
+```
 
 ## Workflow
 
@@ -129,7 +149,7 @@ If the user provides only a source channel, generate a generic/creator-style sig
 Use the helper script in this skill:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_shorts.py \
+python3 $SKILL_DIR/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 50 \
@@ -140,7 +160,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_s
 If YouTube returns `Sign in to confirm you’re not a bot`, rerun with one of:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_shorts.py \
+python3 $SKILL_DIR/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 50 \
@@ -148,7 +168,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_s
   --out ~/youtube-shorts-research/clean-girl-shorts.json \
   --markdown ~/youtube-shorts-research/clean-girl-shorts.md
 
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/scan_shorts.py \
+python3 $SKILL_DIR/scripts/scan_shorts.py \
   "https://www.youtube.com/@_The_Clean_Girl/shorts" \
   --min-likes 10000 \
   --max-videos 50 \
@@ -169,10 +189,10 @@ The script uses `yt-dlp` to read channel Shorts and per-video metadata. It also 
 For each source URL selected by the scanner, use this skill's bundled transcript script:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/fetch_transcript.py "SHORTS_URL" --timestamps
+python3 $SKILL_DIR/scripts/fetch_transcript.py "SHORTS_URL" --timestamps
 ```
 
-If this skill is installed without the bundled script for some reason, use the `youtube-content` skill's transcript script as a fallback.
+If this skill is installed without the bundled script for some reason, use the host agent's YouTube transcript skill/tool as a fallback when available.
 
 If transcript is unavailable:
 
@@ -185,7 +205,7 @@ If transcript is unavailable:
 If the user gives multiple channels, run one scan per channel, then combine them:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/analyze_signals.py \
+python3 $SKILL_DIR/scripts/analyze_signals.py \
   channel-1.json channel-2.json \
   --out signals.json \
   --top 25
@@ -198,7 +218,7 @@ The combined output ranks signals across channels with `cross_channel_signal_sco
 YouTube Shorts is the only built-in live scraper. For TikTok, Instagram Reels, X video, or other platforms, normalize user-provided CSV/JSON exports:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/import_platform.py \
+python3 $SKILL_DIR/scripts/import_platform.py \
   --platform mixed \
   --input platform-export.csv \
   --source-name "Competitor multi-platform export" \
@@ -212,7 +232,7 @@ Then include `platform-normalized.json` in `analyze_signals.py` alongside YouTub
 For generic industry-agnostic strategy:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/generate_report.py \
+python3 $SKILL_DIR/scripts/generate_report.py \
   --signals signals.json \
   --transcripts-dir transcripts \
   --out attract-signal-report.md \
@@ -254,7 +274,7 @@ forbidden_claims:
 Then run:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/generate_report.py \
+python3 $SKILL_DIR/scripts/generate_report.py \
   --signals signals.json \
   --brand brand.yaml \
   --transcripts-dir transcripts \
@@ -272,7 +292,7 @@ For local-only testing, add:
 Transcript files should be named `<video_id>.json` and generated with:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/fetch_transcript.py "SHORTS_URL" --timestamps > transcripts/VIDEO_ID.json
+python3 $SKILL_DIR/scripts/fetch_transcript.py "SHORTS_URL" --timestamps > transcripts/VIDEO_ID.json
 ```
 
 ### 6. Analyze each winning Short
@@ -407,7 +427,7 @@ The expected final deliverable is both a **local Markdown file** and a **Google 
 Preferred report-and-publish helper:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/generate_report.py \
+python3 $SKILL_DIR/scripts/generate_report.py \
   --signals signals.json \
   --brand brand.yaml \
   --transcripts-dir transcripts \
@@ -419,7 +439,7 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/genera
 Use `--open-doc` when the user explicitly wants the generated Doc opened in the browser. The standalone publisher remains available for already-generated Markdown:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/publish_doc.py \
+python3 $SKILL_DIR/scripts/publish_doc.py \
   --file attract-signal-report.md \
   --title "Attract Signal Brief - <Brand>"
 ```
@@ -440,14 +460,14 @@ gog docs write <docId> --append --file brief.md --json
 gog drive get <docId> --json --select id,name,mimeType,webViewLink,owners
 ```
 
-If `gog` is unavailable, keep the local Markdown artifact and tell the user exactly what OAuth/install step is missing; use `google-workspace`'s `GAPI docs create` / `GAPI docs append` flow only when explicitly requested. Never share, permission-change, or overwrite Google Docs without user approval.
+If `gog` is unavailable, keep the local Markdown artifact and tell the user exactly what OAuth/install step is missing; use a host-agent Google Workspace flow only when explicitly requested and available. Never share, permission-change, or overwrite Google Docs without user approval.
 
 ### 9. Google Sheets sprint export
 
 After the user approves a Sheets write:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/export_calendar_sheets.py \
+python3 $SKILL_DIR/scripts/export_calendar_sheets.py \
   --calendar content-sprint.csv \
   --title "Attract Signal Sprint - <Brand>"
 ```
@@ -457,9 +477,9 @@ python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/export
 Save top signals for compounding strategy memory:
 
 ```bash
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal_library.py add --signals signals.json --top-only
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal_library.py list
-python3 ${HERMES_HOME:-$HOME/.hermes}/skills/media/attract-signal/scripts/signal_library.py search "challenge"
+python3 $SKILL_DIR/scripts/signal_library.py add --signals signals.json --top-only
+python3 $SKILL_DIR/scripts/signal_library.py list
+python3 $SKILL_DIR/scripts/signal_library.py search "challenge"
 ```
 
 ## Ethical / Brand Safety Rules

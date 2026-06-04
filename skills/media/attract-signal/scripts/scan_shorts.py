@@ -3,7 +3,8 @@
 
 Requires yt-dlp on PATH. Outputs JSON and optional Markdown.
 This script intentionally collects metadata only; transcript analysis is done by
-Hermes with the youtube-content skill so unavailable transcripts are not invented.
+the bundled transcript helper or a host-agent transcript tool so unavailable
+transcripts are not invented.
 """
 from __future__ import annotations
 
