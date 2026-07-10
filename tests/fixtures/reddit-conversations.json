@@ -1,0 +1,63 @@
+{
+  "items_by_source": {
+    "reddit": [
+      {
+        "item_id": "pain-1",
+        "source": "reddit",
+        "title": "I am frustrated that tattoo booking takes all day",
+        "body": "I keep losing leads because I can't answer every message while tattooing.",
+        "url": "https://www.reddit.com/r/TattooArtists/comments/pain1/booking/",
+        "container": "TattooArtists",
+        "published_at": "2026-07-09",
+        "engagement": {"score": 84, "num_comments": 31}
+      },
+      {
+        "item_id": "request-1",
+        "source": "reddit",
+        "title": "Is there a tool that handles tattoo consultation questions?",
+        "body": "Looking for recommendations that still let the artist take over the conversation.",
+        "url": "https://www.reddit.com/r/TattooArtists/comments/request1/tool/",
+        "container": "TattooArtists",
+        "published_at": "2026-07-08",
+        "engagement": {"score": 35, "num_comments": 18}
+      },
+      {
+        "item_id": "money-1",
+        "source": "reddit",
+        "title": "Would you pay $99 per month for a studio texting assistant?",
+        "body": "I need to know if the subscription is worth it for a two-artist shop.",
+        "url": "https://www.reddit.com/r/tattooing/comments/money1/pricing/",
+        "container": "tattooing",
+        "published_at": "2026-07-07",
+        "engagement": {"score": 52, "num_comments": 44}
+      },
+      {
+        "item_id": "hot-1",
+        "source": "reddit",
+        "title": "Unpopular opinion: deposits should always be non-refundable",
+        "body": "This debate keeps splitting artists and clients.",
+        "url": "https://www.reddit.com/r/tattooadvice/comments/hot1/deposits/",
+        "container": "tattooadvice",
+        "published_at": "2026-07-06",
+        "engagement": {"score": 910, "num_comments": 286}
+      },
+      {
+        "item_id": "alternative-1",
+        "source": "reddit",
+        "title": "Seeking an alternative to our current tattoo CRM",
+        "body": "We are switching from it because the texting workflow is broken and expensive.",
+        "url": "https://www.reddit.com/r/TattooArtists/comments/alternative1/crm/",
+        "container": "TattooArtists",
+        "published_at": "2026-07-05",
+        "engagement": {"score": 61, "num_comments": 27}
+      }
+    ],
+    "x": [
+      {
+        "source": "x",
+        "title": "This must never be imported",
+        "url": "https://x.com/example/status/1"
+      }
+    ]
+  }
+}

@@ -1,21 +1,20 @@
 ---
 name: attract-signal
-description: "Use when scanning YouTube Shorts or short-form channels for content signals: high-performing videos, transcript/metadata citations, trend types, hooks, visual hooks, repeatable formats, and brand-specific content strategy briefs, scripts, shot lists, storyboards, or Google Docs."
-version: 1.0.0
-author: 1GMedia
+description: "Use when scanning short-form channels or current Reddit conversations for content signals: high-performing videos, audience pain points, solution requests, money talk, hot discussions, seeking alternatives, exact customer language, citations, hooks, repeatable formats, and brand-specific content strategy briefs, scripts, shot lists, storyboards, or Google Docs."
 license: MIT
-platforms: [linux, macos, windows]
-required_commands:
-  - yt-dlp
 metadata:
+  version: 1.1.0
+  author: 1GMedia
+  platforms: [linux, macos, windows]
+  required_commands: [yt-dlp]
   portable_skill: true
   install_targets:
     hermes: ~/.hermes/skills/attract-signal
     codex: ~/.codex/skills/attract-signal
     claude: ~/.claude/skills/attract-signal
   hermes:
-    tags: [youtube, shorts, trend-analysis, content-strategy, scriptwriting, citations]
-    related_skills: [youtube-content, gogcli, google-workspace]
+    tags: [youtube, shorts, reddit, audience-research, trend-analysis, content-strategy, scriptwriting, citations]
+    related_skills: [last30days, youtube-content, gogcli, google-workspace]
 ---
 
 # Attract Signal
@@ -54,6 +53,36 @@ Don't use this for long-form YouTube summaries only; use `youtube-content` direc
 - `gogcli` — preferred Google CLI for writing the default Google Docs copy (`brew install openclaw/tap/gogcli`).
 - `google-workspace` — optional Google Workspace fallback if `gog`/`gogcli` is not installed or not authenticated and the host agent provides that skill/tool.
 - `image_generate` tool — use later to generate storyboard frames after the script/shot list is approved.
+- `last30days` — preferred independent evidence collector for current Reddit threads and comments. Keep it separately installed and updateable; Attract Signal consumes its output instead of vendoring its engine.
+
+## Deep Reddit Research Mode
+
+Use this mode when the user wants Reddit audience research, voice-of-customer language, content gaps, or current conversations translated into content strategy.
+
+1. Run the independently installed `last30days` skill for the topic and include Reddit. Follow its own setup, source-health, research, and citation contract exactly.
+2. Locate the raw Markdown artifact from the Last30Days footer, or use normalized Reddit JSON containing titles, bodies, communities, dates, engagement, comments, and URLs.
+3. Classify and rank the evidence:
+
+```bash
+python3 $SKILL_DIR/scripts/analyze_reddit_conversations.py \
+  ~/Documents/Last30Days/<topic>-raw.md \
+  --topic "<topic>" \
+  --out reddit-conversation-signals.json \
+  --markdown reddit-conversation-signals.md
+```
+
+4. Read `references/reddit-deep-research-prompt.md` completely before semantic synthesis. Use it to turn the analyzer output into audience findings, content gaps, hooks, scripts, shot lists, and 14-day sprint inputs.
+5. Preserve each Reddit URL beside every finding and content angle. Never invent a quote, metric, price, date, subreddit-growth claim, or demand signal. Do not treat complaints alone as purchase intent.
+
+The five conversation lenses are multi-label:
+
+- Pain Points
+- Solution Requests
+- Money Talk
+- Hot Discussions
+- Seeking Alternatives
+
+Keep the integration one-way and update-safe: Last30Days owns discovery/freshness; Attract Signal owns conversation analysis and content transformation. Do not copy the Last30Days engine into this repository.
 
 ## Setup
 

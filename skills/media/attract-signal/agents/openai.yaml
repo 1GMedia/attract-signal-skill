@@ -1,0 +1,4 @@
+interface:
+  display_name: "Attract Signal"
+  short_description: "Turn content and Reddit signals into strategy"
+  default_prompt: "Use $attract-signal to research current audience conversations and turn the strongest cited signals into original content."
