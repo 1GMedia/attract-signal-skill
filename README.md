@@ -1,6 +1,6 @@
 # Attract Signal Skill
 
-A shareable Hermes, Codex, and Claude skill for industry-agnostic short-form content signal intelligence: high-performing YouTube Shorts, TikTok, Instagram Reels, X video, and other short-form content; repeatable hooks, proof/meat types, CTA paths, visual mechanics, source citations, and 14-day content test sprints.
+A shareable Hermes, Codex, and Claude skill for industry-agnostic content signal intelligence: high-performing short-form content plus current Reddit audience conversations; repeatable hooks, proof/meat types, CTA paths, visual mechanics, voice-of-customer language, source citations, and 14-day content test sprints.
 
 Default example channel:
 
@@ -25,6 +25,10 @@ https://www.youtube.com/@_The_Clean_Girl/shorts
 - Maintains an optional local signal library for reusable pattern memory.
 - Creates a Google Docs copy by default through `gogcli` after the local Markdown report is written.
 - Supports optional Google Sheets calendar export through `gogcli`.
+- Consumes Last30Days Reddit Markdown or normalized JSON without copying its independently updateable research engine.
+- Surfaces Pain Points, Solution Requests, Money Talk, Hot Discussions, and Seeking Alternatives.
+- Ranks Reddit threads by relevance, recency, engagement, urgency, and commercial intent while preserving exact language and URLs.
+- Converts cited Reddit findings into content gaps, hooks, scripts, shot lists, and sprint inputs through a reusable deep-research prompt.
 
 ## Requirements
 
@@ -156,6 +160,35 @@ python3 skills/media/attract-signal/scripts/analyze_signals.py \
   ./youtube-channel.json ./platform-normalized.json \
   --out ./signals.json
 ```
+
+## Analyze Reddit Conversations With Last30Days
+
+Keep `last30days` installed as its own skill so it can continue tracking the upstream project. Run it for the research topic, then pass the raw Markdown artifact from its footer into Attract Signal:
+
+```bash
+python3 skills/media/attract-signal/scripts/analyze_reddit_conversations.py \
+  ~/Documents/Last30Days/<topic>-raw.md \
+  --topic "<topic>" \
+  --out ./reddit-conversation-signals.json \
+  --markdown ./reddit-conversation-signals.md
+```
+
+The analyzer also accepts normalized Reddit JSON, including Last30Days `items_by_source.reddit` payloads. It produces:
+
+- an audience and subreddit map
+- ranked conversations
+- five evidence lenses: Pain Points, Solution Requests, Money Talk, Hot Discussions, and Seeking Alternatives
+- exact audience language with source URLs
+- buying and switching signals
+- a content opportunity matrix
+
+For semantic synthesis and the content handoff, use:
+
+```text
+skills/media/attract-signal/references/reddit-deep-research-prompt.md
+```
+
+This boundary is intentional: Last30Days owns current evidence collection; Attract Signal owns audience interpretation and content creation. Updating either skill does not overwrite the other.
 
 ## Generate A Strategy Report
 

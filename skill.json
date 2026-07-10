@@ -1,6 +1,7 @@
 {
   "name": "attract-signal",
-  "description": "Portable Hermes/Codex/Claude skill for short-form content signals across YouTube Shorts, TikTok, Instagram Reels, X video, and exports; analyzes hooks/trends/transcripts and turns signals into original brand-safe content strategy with citations.",
+  "version": "1.1.0",
+  "description": "Portable Hermes/Codex/Claude skill for short-form and Reddit audience signals; analyzes hooks, trends, transcripts, pain points, solution requests, money talk, hot discussions, and alternatives, then turns cited evidence into original brand-safe content strategy.",
   "skill_path": "skills/media/attract-signal",
   "install_targets": {
     "hermes": "~/.hermes/skills/attract-signal",
@@ -17,6 +18,7 @@
     "skills/media/attract-signal/scripts/scan_shorts.py",
     "skills/media/attract-signal/scripts/import_platform.py",
     "skills/media/attract-signal/scripts/analyze_signals.py",
+    "skills/media/attract-signal/scripts/analyze_reddit_conversations.py",
     "skills/media/attract-signal/scripts/generate_report.py",
     "skills/media/attract-signal/scripts/fetch_transcript.py",
     "skills/media/attract-signal/scripts/publish_doc.py",
