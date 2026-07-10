@@ -13,6 +13,7 @@ import html
 import json
 import math
 import re
+import shutil
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
@@ -680,7 +681,41 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--per-lens", type=int, default=10, help="Maximum rows per lens in Markdown")
     parser.add_argument("--out", type=Path, default=None, help="Write structured JSON to this path")
     parser.add_argument("--markdown", type=Path, default=None, help="Write a reviewable Markdown brief")
+    parser.add_argument(
+        "--engine", choices=("v1", "v2"), default="v1",
+        help="Use the legacy deterministic report or delegate to Reddit Intelligence v2",
+    )
+    parser.add_argument("--legacy", action="store_true", help="Explicit alias for --engine v1")
+    parser.add_argument("--quality", choices=("balanced", "deep"), default="balanced", help="v2 model-routing quality")
+    parser.add_argument("--audience-id", default=None, help="Optional saved audience for v2 persistence")
+    parser.add_argument("--home", type=Path, default=None, help="Override ATTRACT_SIGNAL_HOME for v2")
     args = parser.parse_args(argv)
+
+    engine = "v1" if args.legacy else args.engine
+    if engine == "v2":
+        import os
+        from reddit_intelligence import SignalStore, run_research
+
+        if args.home:
+            os.environ["ATTRACT_SIGNAL_HOME"] = str(args.home.expanduser().resolve())
+        output_dir = (args.out.parent if args.out else args.markdown.parent if args.markdown else Path.cwd()) / "reddit-intelligence-v2"
+        store = SignalStore()
+        try:
+            run_research(
+                topic=args.topic, inputs=args.inputs, audience_id=args.audience_id, brand_path=None,
+                days=args.days, quality=args.quality, output_dir=output_dir, store=store,
+            )
+        finally:
+            store.close()
+        if args.out:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(output_dir / "reddit-intelligence.json", args.out)
+        if args.markdown:
+            args.markdown.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(output_dir / "reddit-intelligence.md", args.markdown)
+        if not args.out and not args.markdown:
+            print((output_dir / "reddit-intelligence.json").read_text(encoding="utf-8"), end="")
+        return 0
 
     as_of = date.fromisoformat(args.as_of)
     conversations = dedupe([item for path in args.inputs for item in load_conversations(path)])

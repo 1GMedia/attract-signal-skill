@@ -1,7 +1,7 @@
 {
   "name": "attract-signal",
-  "version": "1.1.0",
-  "description": "Portable Hermes/Codex/Claude skill for short-form and Reddit audience signals; analyzes hooks, trends, transcripts, pain points, solution requests, money talk, hot discussions, and alternatives, then turns cited evidence into original brand-safe content strategy.",
+  "version": "2.0.0",
+  "description": "Portable Hermes/Codex/Claude skill for short-form and Reddit audience intelligence; adds precision-first relevance, semantic themes, saved audiences, alerts, dashboards, and evidence-linked content strategy while keeping Last30Days independently updateable.",
   "skill_path": "skills/media/attract-signal",
   "install_targets": {
     "hermes": "~/.hermes/skills/attract-signal",
@@ -19,6 +19,9 @@
     "skills/media/attract-signal/scripts/import_platform.py",
     "skills/media/attract-signal/scripts/analyze_signals.py",
     "skills/media/attract-signal/scripts/analyze_reddit_conversations.py",
+    "skills/media/attract-signal/scripts/reddit_intelligence.py",
+    "skills/media/attract-signal/scripts/reddit_signal.py",
+    "skills/media/attract-signal/scripts/evaluate_reddit_intelligence.py",
     "skills/media/attract-signal/scripts/generate_report.py",
     "skills/media/attract-signal/scripts/fetch_transcript.py",
     "skills/media/attract-signal/scripts/publish_doc.py",
@@ -26,6 +29,7 @@
     "skills/media/attract-signal/scripts/signal_library.py"
   ],
   "optional": [
-    "gogcli"
+    "gogcli",
+    "openai"
   ]
 }
