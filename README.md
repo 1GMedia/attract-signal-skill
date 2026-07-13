@@ -161,9 +161,60 @@ python3 skills/media/attract-signal/scripts/analyze_signals.py \
   --out ./signals.json
 ```
 
-## Analyze Reddit Conversations With Last30Days
+## Reddit Intelligence 2.0
 
-Keep `last30days` installed as its own skill so it can continue tracking the upstream project. Run it for the research topic, then pass the raw Markdown artifact from its footer into Attract Signal:
+Keep `last30days` installed as its own skill so it can continue tracking the upstream project. Live research resolves a compatible `3.11.x` install and orchestrates scout/deep retrieval directly:
+
+```bash
+python3 skills/media/attract-signal/scripts/reddit_signal.py research \
+  --topic "<topic>" \
+  --quality balanced \
+  --out-dir ./reddit-intelligence
+```
+
+Pass `--input ~/Documents/Last30Days/<topic>-raw.md` for reproducible artifact-only analysis, or add `--refresh` to merge supplied evidence with fresh retrieval. Use `--backfill-days 365` for bounded historical windows; provider-paid backfill requires the explicit `--allow-paid-backfill` flag. The v2 output includes:
+
+- a hard relevance gate that runs before engagement or conversation lenses
+- corpus sufficiency status (`ready`, `limited`, or `insufficient`)
+- five GummySearch-style conversation lenses plus purchase intent and jobs-to-be-done
+- recurring semantic themes with independent-thread support
+- exact audience language and immutable Reddit citations
+- SQLite history, saved audiences, local alerts, and run-over-run snapshots
+- a self-contained searchable HTML dashboard
+- Markdown, JSON, conversation CSV, opportunity CSV, query-plan JSON, and 14-day sprint CSV artifacts
+
+Without `OPENAI_API_KEY`, v2 uses precision-first deterministic mode. With a real API key and the optional `openai` package, it discovers available models through `/v1/models` and uses strict-schema Responses API calls. It never assumes a GPT-5.6 Sol model ID and never uses ChatGPT/Codex authentication as an API credential.
+
+```bash
+python3 -m pip install -r requirements-reddit-ai.txt
+```
+
+Save and monitor an audience locally:
+
+```bash
+python3 skills/media/attract-signal/scripts/reddit_signal.py audience save \
+  --id tattoo-booking \
+  --topic "tattoo studio booking software" \
+  --cadence-hours 168
+
+python3 skills/media/attract-signal/scripts/reddit_signal.py watch run --due
+python3 skills/media/attract-signal/scripts/reddit_signal.py community discover --audience-id tattoo-booking
+python3 skills/media/attract-signal/scripts/reddit_signal.py search run 'lens:pain_points intent:active_switching'
+python3 skills/media/attract-signal/scripts/reddit_signal.py opportunities list --status new
+python3 skills/media/attract-signal/scripts/reddit_signal.py dashboard open --audience-id tattoo-booking
+```
+
+Run the machine-readable acceptance harness against a manually labeled JSONL corpus:
+
+```bash
+python3 skills/media/attract-signal/scripts/evaluate_reddit_intelligence.py \
+  path/to/reddit-eval-gold.jsonl \
+  --out ./reddit-eval-report.json
+```
+
+Use `reddit_signal.py evaluation sample` to build a labeling queue; AI suggestions do not become gold labels. The harness fails until at least 300 examples are human-reviewed and the documented precision, recall, five-lens macro F1, purchase-intent, and high-engagement-negative gates pass. Do not claim GummySearch replacement quality from smoke fixtures alone.
+
+The v1 analyzer remains available for one major release:
 
 ```bash
 python3 skills/media/attract-signal/scripts/analyze_reddit_conversations.py \
@@ -173,7 +224,9 @@ python3 skills/media/attract-signal/scripts/analyze_reddit_conversations.py \
   --markdown ./reddit-conversation-signals.md
 ```
 
-The analyzer also accepts normalized Reddit JSON, including Last30Days `items_by_source.reddit` payloads. It produces:
+Add `--engine v2` to delegate the old command shape to v2, or `--legacy` to force the historical report. Both analyzers accept normalized Reddit JSON, including Last30Days `items_by_source.reddit` payloads.
+
+The legacy analyzer produces:
 
 - an audience and subreddit map
 - ranked conversations

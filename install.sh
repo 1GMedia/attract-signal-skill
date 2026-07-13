@@ -52,5 +52,8 @@ esac
 echo "Recommended dependencies:"
 echo "python3 -m pip install -U yt-dlp youtube-transcript-api"
 echo
+echo "Optional Reddit Intelligence semantic routing:"
+echo "python3 -m pip install 'openai>=2,<3'"
+echo
 echo "Optional Google publishing:"
 echo "brew install openclaw/tap/gogcli && gog auth status"

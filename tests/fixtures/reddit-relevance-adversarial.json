@@ -1,0 +1,46 @@
+{
+  "items_by_source": {
+    "reddit": [
+      {
+        "item_id": "relevant-booking",
+        "source": "reddit",
+        "title": "Tattoo studio booking software keeps losing consultation messages",
+        "body": "Looking for a better CRM because we cannot track deposits and follow-ups.",
+        "url": "https://www.reddit.com/r/TattooArtists/comments/rel1/booking_software/",
+        "container": "TattooArtists",
+        "published_at": "2026-07-09",
+        "engagement": {"score": 32, "num_comments": 18}
+      },
+      {
+        "item_id": "relevant-price",
+        "source": "reddit",
+        "title": "Would a small tattoo studio pay for automated booking reminders?",
+        "body": "The software costs $99 monthly and I am trying to decide if it is worth it.",
+        "url": "https://www.reddit.com/r/TattooArtists/comments/rel2/booking_price/",
+        "container": "TattooArtists",
+        "published_at": "2026-07-08",
+        "engagement": {"score": 21, "num_comments": 11}
+      },
+      {
+        "item_id": "relevant-alternative",
+        "source": "reddit",
+        "title": "Alternative tattoo booking software after cancelling our CRM",
+        "body": "We are actively switching because the current consultation workflow is broken.",
+        "url": "https://www.reddit.com/r/tattooing/comments/rel3/crm_alternative/",
+        "container": "tattooing",
+        "published_at": "2026-07-07",
+        "engagement": {"score": 44, "num_comments": 24}
+      },
+      {
+        "item_id": "offtopic-viral",
+        "source": "reddit",
+        "title": "Can this damaged tattoo design be repaired?",
+        "body": "The artist changed the flower colors and I need advice about fixing the artwork.",
+        "url": "https://www.reddit.com/r/tattooadvice/comments/noise1/damaged_design/",
+        "container": "tattooadvice",
+        "published_at": "2026-07-09",
+        "engagement": {"score": 1487, "num_comments": 960}
+      }
+    ]
+  }
+}

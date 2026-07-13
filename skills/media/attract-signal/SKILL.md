@@ -3,7 +3,7 @@ name: attract-signal
 description: "Use when scanning short-form channels or current Reddit conversations for content signals: high-performing videos, audience pain points, solution requests, money talk, hot discussions, seeking alternatives, exact customer language, citations, hooks, repeatable formats, and brand-specific content strategy briefs, scripts, shot lists, storyboards, or Google Docs."
 license: MIT
 metadata:
-  version: 1.1.0
+  version: 2.0.0
   author: 1GMedia
   platforms: [linux, macos, windows]
   required_commands: [yt-dlp]
@@ -59,9 +59,33 @@ Don't use this for long-form YouTube summaries only; use `youtube-content` direc
 
 Use this mode when the user wants Reddit audience research, voice-of-customer language, content gaps, or current conversations translated into content strategy.
 
-1. Run the independently installed `last30days` skill for the topic and include Reddit. Follow its own setup, source-health, research, and citation contract exactly.
-2. Locate the raw Markdown artifact from the Last30Days footer, or use normalized Reddit JSON containing titles, bodies, communities, dates, engagement, comments, and URLs.
-3. Classify and rank the evidence:
+Before starting a saved-audience run, call `reddit_signal.py alerts list --pending` and summarize any unacknowledged local alerts in chat. Do not acknowledge them automatically.
+
+1. Run `reddit_signal.py doctor` before live retrieval. The orchestrator resolves one canonical compatible Last30Days `3.11.x` installation, consumes its cached doctor report, and invokes it with argument arrays plus temporary plan files. It runs a Reddit scout pass and adds a deep pass when the scout is thin.
+2. Run live research without `--input`, or supply raw Last30Days Markdown/JSON for a reproducible artifact-only run. Add `--refresh` to merge supplied artifacts with fresh evidence:
+
+```bash
+python3 $SKILL_DIR/scripts/reddit_signal.py research \
+  --topic "<topic>" \
+  --quality balanced \
+  --out-dir ~/Documents/AttractSignal/reports/<topic>
+```
+
+Artifact-only and merged examples:
+
+```bash
+python3 $SKILL_DIR/scripts/reddit_signal.py research --topic "<topic>" --input artifact.json
+python3 $SKILL_DIR/scripts/reddit_signal.py research --topic "<topic>" --input artifact.json --refresh
+```
+
+Use `--backfill-days 365` for bounded 30-day historical windows. Never add `--allow-paid-backfill` unless the user explicitly authorizes provider spend. Never pin `--reddit-backend scrapecreators` without a configured key and an explicit request.
+
+The command writes structured JSON, reviewable Markdown, a self-contained HTML dashboard, conversation and opportunity CSVs, a query plan, and a 14-day sprint CSV. The sprint stays empty when the corpus is insufficient.
+
+4. Use the five conversation lenses only after the relevance gate. A popular post cannot become `Hot Discussions` unless it is first relevant to the requested topic.
+5. Read `references/reddit-deep-research-prompt.md` completely before additional agent synthesis. Keep every evidence URL beside the resulting angle.
+
+The old analyzer remains available for compatibility:
 
 ```bash
 python3 $SKILL_DIR/scripts/analyze_reddit_conversations.py \
@@ -71,8 +95,7 @@ python3 $SKILL_DIR/scripts/analyze_reddit_conversations.py \
   --markdown reddit-conversation-signals.md
 ```
 
-4. Read `references/reddit-deep-research-prompt.md` completely before semantic synthesis. Use it to turn the analyzer output into audience findings, content gaps, hooks, scripts, shot lists, and 14-day sprint inputs.
-5. Preserve each Reddit URL beside every finding and content angle. Never invent a quote, metric, price, date, subreddit-growth claim, or demand signal. Do not treat complaints alone as purchase intent.
+Add `--engine v2` to delegate that compatibility command to Reddit Intelligence v2. Use `--legacy` to force the v1 output during the transition.
 
 The five conversation lenses are multi-label:
 
@@ -83,6 +106,53 @@ The five conversation lenses are multi-label:
 - Seeking Alternatives
 
 Keep the integration one-way and update-safe: Last30Days owns discovery/freshness; Attract Signal owns conversation analysis and content transformation. Do not copy the Last30Days engine into this repository.
+
+### Saved audiences, monitoring, search, and opportunity workflow
+
+```bash
+python3 $SKILL_DIR/scripts/reddit_signal.py audience save \
+  --id <audience-id> \
+  --topic "<topic>" \
+  --cadence-hours 168
+
+python3 $SKILL_DIR/scripts/reddit_signal.py watch run --due
+python3 $SKILL_DIR/scripts/reddit_signal.py alerts list --pending
+python3 $SKILL_DIR/scripts/reddit_signal.py community discover --audience-id <audience-id>
+python3 $SKILL_DIR/scripts/reddit_signal.py search run '"booking software" lens:pain_points intent:active_switching'
+python3 $SKILL_DIR/scripts/reddit_signal.py search save --name switching --audience-id <audience-id> --query 'intent:active_switching'
+python3 $SKILL_DIR/scripts/reddit_signal.py opportunities list --status new
+python3 $SKILL_DIR/scripts/reddit_signal.py dashboard open --audience-id <audience-id>
+python3 $SKILL_DIR/scripts/reddit_signal.py doctor
+```
+
+Opportunity transitions are `new -> triaged -> approved -> drafted -> published`, with `dismissed` available before publication. Generate community reply guidance only when requested. Never post, message, vote, or impersonate the user.
+
+Use `evaluation sample` to create a human-labeling queue. AI suggestions are never gold labels. Do not claim GummySearch parity until at least 300 examples are human-reviewed and `evaluation run` passes every release gate, including five-lens macro F1.
+
+On macOS, `watch install --interval-hours 24` creates an opt-in `launchd` job. Never install a schedule unless the user explicitly asks. On Linux or Windows, schedule `watch run --due` with cron or Task Scheduler.
+
+### Optional OpenAI semantic routing
+
+The v2 pipeline is safe and useful without an API key. With `OPENAI_API_KEY`, it uses the official Responses API and strict JSON Schemas for uncertain relevance and conversation intelligence. It queries `/v1/models` before selecting models. Do not assume a GPT-5.6 Sol API ID and never use ChatGPT/Codex authentication as an API credential.
+
+Install the optional SDK when semantic routing is wanted:
+
+```bash
+python3 -m pip install 'openai>=2,<3'
+```
+
+Optional model aliases:
+
+```text
+ATTRACT_SIGNAL_MODEL_FILTER
+ATTRACT_SIGNAL_MODEL_ANALYSIS
+ATTRACT_SIGNAL_MODEL_SOL
+ATTRACT_SIGNAL_MODEL_SYNTHESIS
+ATTRACT_SIGNAL_EMBEDDING_MODEL
+ATTRACT_SIGNAL_MAX_MODEL_CALLS
+```
+
+When a configured Sol model is unavailable, v2 records and uses a verified high-reasoning fallback. Deep mode uses background Responses for theme synthesis; balanced mode reserves high-reasoning calls for ambiguous evidence.
 
 ## Setup
 
