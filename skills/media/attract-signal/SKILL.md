@@ -61,17 +61,24 @@ Use this mode when the user wants Reddit audience research, voice-of-customer la
 
 Before starting a saved-audience run, call `reddit_signal.py alerts list --pending` and summarize any unacknowledged local alerts in chat. Do not acknowledge them automatically.
 
-1. Run the independently installed `last30days` skill for the topic and include Reddit. Follow its own setup, source-health, research, and citation contract exactly. Use a scout pass to resolve terminology, dedicated subreddits, category peers, and competitors; use the saved `query-plan.json` for a deeper follow-up pass when the first corpus is limited.
-2. Locate the raw Markdown artifact from the Last30Days footer, or use normalized Reddit JSON containing titles, bodies, communities, dates, engagement, comments, and URLs.
-3. Run Reddit Intelligence v2. Repeat `--input` to merge scout/deep artifacts or public/ScrapeCreators lanes:
+1. Run `reddit_signal.py doctor` before live retrieval. The orchestrator resolves one canonical compatible Last30Days `3.11.x` installation, consumes its cached doctor report, and invokes it with argument arrays plus temporary plan files. It runs a Reddit scout pass and adds a deep pass when the scout is thin.
+2. Run live research without `--input`, or supply raw Last30Days Markdown/JSON for a reproducible artifact-only run. Add `--refresh` to merge supplied artifacts with fresh evidence:
 
 ```bash
 python3 $SKILL_DIR/scripts/reddit_signal.py research \
   --topic "<topic>" \
-  --input ~/Documents/Last30Days/<topic>-raw.md \
   --quality balanced \
   --out-dir ~/Documents/AttractSignal/reports/<topic>
 ```
+
+Artifact-only and merged examples:
+
+```bash
+python3 $SKILL_DIR/scripts/reddit_signal.py research --topic "<topic>" --input artifact.json
+python3 $SKILL_DIR/scripts/reddit_signal.py research --topic "<topic>" --input artifact.json --refresh
+```
+
+Use `--backfill-days 365` for bounded 30-day historical windows. Never add `--allow-paid-backfill` unless the user explicitly authorizes provider spend. Never pin `--reddit-backend scrapecreators` without a configured key and an explicit request.
 
 The command writes structured JSON, reviewable Markdown, a self-contained HTML dashboard, conversation and opportunity CSVs, a query plan, and a 14-day sprint CSV. The sprint stays empty when the corpus is insufficient.
 
@@ -100,20 +107,27 @@ The five conversation lenses are multi-label:
 
 Keep the integration one-way and update-safe: Last30Days owns discovery/freshness; Attract Signal owns conversation analysis and content transformation. Do not copy the Last30Days engine into this repository.
 
-### Saved audiences, monitoring, and dashboard
+### Saved audiences, monitoring, search, and opportunity workflow
 
 ```bash
 python3 $SKILL_DIR/scripts/reddit_signal.py audience save \
   --id <audience-id> \
   --topic "<topic>" \
-  --input "~/Documents/Last30Days/<topic>*-raw.md" \
   --cadence-hours 168
 
 python3 $SKILL_DIR/scripts/reddit_signal.py watch run --due
 python3 $SKILL_DIR/scripts/reddit_signal.py alerts list --pending
+python3 $SKILL_DIR/scripts/reddit_signal.py community discover --audience-id <audience-id>
+python3 $SKILL_DIR/scripts/reddit_signal.py search run '"booking software" lens:pain_points intent:active_switching'
+python3 $SKILL_DIR/scripts/reddit_signal.py search save --name switching --audience-id <audience-id> --query 'intent:active_switching'
+python3 $SKILL_DIR/scripts/reddit_signal.py opportunities list --status new
 python3 $SKILL_DIR/scripts/reddit_signal.py dashboard open --audience-id <audience-id>
 python3 $SKILL_DIR/scripts/reddit_signal.py doctor
 ```
+
+Opportunity transitions are `new -> triaged -> approved -> drafted -> published`, with `dismissed` available before publication. Generate community reply guidance only when requested. Never post, message, vote, or impersonate the user.
+
+Use `evaluation sample` to create a human-labeling queue. AI suggestions are never gold labels. Do not claim GummySearch parity until at least 300 examples are human-reviewed and `evaluation run` passes every release gate, including five-lens macro F1.
 
 On macOS, `watch install --interval-hours 24` creates an opt-in `launchd` job. Never install a schedule unless the user explicitly asks. On Linux or Windows, schedule `watch run --due` with cron or Task Scheduler.
 

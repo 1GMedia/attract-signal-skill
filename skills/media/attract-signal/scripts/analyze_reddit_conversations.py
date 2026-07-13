@@ -19,7 +19,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
 from statistics import median
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 
 
 LENSES = {
@@ -216,8 +216,8 @@ def extract_json_rows(payload: Any, inherited_source: Optional[str] = None) -> l
 
 
 def row_to_conversation(row: dict[str, Any], index: int) -> Conversation:
-    engagement = row.get("engagement") if isinstance(row.get("engagement"), dict) else {}
-    metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+    engagement = cast(dict[str, Any], row.get("engagement")) if isinstance(row.get("engagement"), dict) else {}
+    metadata = cast(dict[str, Any], row.get("metadata")) if isinstance(row.get("metadata"), dict) else {}
     title = clean_text(first_value(row, ("title", "name", "headline")))
     body = clean_text(first_value(row, ("body", "selftext", "snippet", "evidence", "text", "description")))
     url = normalize_url(first_value(row, ("url", "source_url", "permalink", "link")))
@@ -421,7 +421,7 @@ def score_conversations(conversations: list[Conversation], topic: str, as_of: da
         if commercial >= 0.5:
             reasons.append("commercial intent")
         if conversation.lenses:
-            reasons.append("matches " + ", ".join(LENSES[lens]["label"] for lens in conversation.lenses))
+            reasons.append("matches " + ", ".join(str(LENSES[lens]["label"]) for lens in conversation.lenses))
         conversation.rank_reason = reasons or ["available Reddit evidence"]
 
 
@@ -561,7 +561,7 @@ def render_markdown(payload: dict[str, Any], per_lens: int) -> str:
     ]
     for row in payload["audience_map"]:
         labels = sorted(row["lens_counts"], key=row["lens_counts"].get, reverse=True)
-        label_text = ", ".join(LENSES[lens]["label"] for lens in labels[:3]) or "No strong lens"
+        label_text = ", ".join(str(LENSES[lens]["label"]) for lens in labels[:3]) or "No strong lens"
         lines.append(
             f"| r/{md_escape(row['subreddit'])} | {row['conversation_count']} | {row['upvotes']} | "
             f"{row['comments']} | {md_escape(label_text)} | {linked_source(row['top_source_url'])} |"
@@ -575,9 +575,9 @@ def render_markdown(payload: dict[str, Any], per_lens: int) -> str:
         "|---:|---|---|---|---|",
     ])
     for item in payload["top_conversations"]:
-        labels = ", ".join(item["lens_labels"]) or "Unclassified"
+        conversation_labels = ", ".join(item["lens_labels"]) or "Unclassified"
         lines.append(
-            f"| {item['signal_score']} | {md_escape(labels)} | r/{md_escape(item['subreddit'])} | "
+            f"| {item['signal_score']} | {md_escape(conversation_labels)} | r/{md_escape(item['subreddit'])} | "
             f"\"{md_escape(item['exact_quote'])}\" | {linked_source(item['source_url'])} |"
         )
 
@@ -601,12 +601,12 @@ def render_markdown(payload: dict[str, Any], per_lens: int) -> str:
 
     lines.extend(["## Exact Audience Language", ""])
     for row in payload["exact_language"][:15]:
-        labels = ", ".join(LENSES[lens]["label"] for lens in row["lenses"]) or "unclassified"
+        quote_labels = ", ".join(str(LENSES[lens]["label"]) for lens in row["lenses"]) or "unclassified"
         attribution = f" by {row['author']}" if row.get("author") else ""
         vote_text = f", {row.get('upvotes', 0)} upvotes" if row["kind"] == "comment" else ""
         lines.append(
             f"- \"{row['quote']}\" - {row['kind']}{attribution}{vote_text} in r/{row['subreddit']} - "
-            f"{labels} - {linked_source(row['source_url'])}"
+            f"{quote_labels} - {linked_source(row['source_url'])}"
         )
 
     question_rows = [

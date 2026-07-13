@@ -161,19 +161,18 @@ python3 skills/media/attract-signal/scripts/analyze_signals.py \
   --out ./signals.json
 ```
 
-## Analyze Reddit Conversations With Last30Days
+## Reddit Intelligence 2.0
 
-Keep `last30days` installed as its own skill so it can continue tracking the upstream project. Run it for the research topic, then pass the raw Markdown artifact from its footer into Reddit Intelligence v2:
+Keep `last30days` installed as its own skill so it can continue tracking the upstream project. Live research resolves a compatible `3.11.x` install and orchestrates scout/deep retrieval directly:
 
 ```bash
 python3 skills/media/attract-signal/scripts/reddit_signal.py research \
   --topic "<topic>" \
-  --input ~/Documents/Last30Days/<topic>-raw.md \
   --quality balanced \
   --out-dir ./reddit-intelligence
 ```
 
-Repeat `--input` to merge scout/deep passes or public/ScrapeCreators artifacts. The v2 output includes:
+Pass `--input ~/Documents/Last30Days/<topic>-raw.md` for reproducible artifact-only analysis, or add `--refresh` to merge supplied evidence with fresh retrieval. Use `--backfill-days 365` for bounded historical windows; provider-paid backfill requires the explicit `--allow-paid-backfill` flag. The v2 output includes:
 
 - a hard relevance gate that runs before engagement or conversation lenses
 - corpus sufficiency status (`ready`, `limited`, or `insufficient`)
@@ -196,10 +195,12 @@ Save and monitor an audience locally:
 python3 skills/media/attract-signal/scripts/reddit_signal.py audience save \
   --id tattoo-booking \
   --topic "tattoo studio booking software" \
-  --input "~/Documents/Last30Days/tattoo-studio-booking*-raw.md" \
   --cadence-hours 168
 
 python3 skills/media/attract-signal/scripts/reddit_signal.py watch run --due
+python3 skills/media/attract-signal/scripts/reddit_signal.py community discover --audience-id tattoo-booking
+python3 skills/media/attract-signal/scripts/reddit_signal.py search run 'lens:pain_points intent:active_switching'
+python3 skills/media/attract-signal/scripts/reddit_signal.py opportunities list --status new
 python3 skills/media/attract-signal/scripts/reddit_signal.py dashboard open --audience-id tattoo-booking
 ```
 
@@ -211,7 +212,7 @@ python3 skills/media/attract-signal/scripts/evaluate_reddit_intelligence.py \
   --out ./reddit-eval-report.json
 ```
 
-The harness fails until the corpus contains at least 300 examples and the documented precision, recall, lens, purchase-intent, and high-engagement-negative gates pass. Do not claim GummySearch replacement quality from smoke fixtures alone.
+Use `reddit_signal.py evaluation sample` to build a labeling queue; AI suggestions do not become gold labels. The harness fails until at least 300 examples are human-reviewed and the documented precision, recall, five-lens macro F1, purchase-intent, and high-engagement-negative gates pass. Do not claim GummySearch replacement quality from smoke fixtures alone.
 
 The v1 analyzer remains available for one major release:
 

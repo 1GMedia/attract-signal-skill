@@ -255,6 +255,89 @@ class SignalStore:
                 cache_key TEXT NOT NULL UNIQUE, response_json TEXT, input_tokens INTEGER,
                 output_tokens INTEGER, elapsed_ms INTEGER, status TEXT NOT NULL, created_at TEXT NOT NULL
             )""",
+            """CREATE TABLE IF NOT EXISTS retrieval_jobs (
+                id TEXT PRIMARY KEY, audience_id TEXT, run_id TEXT, phase TEXT NOT NULL,
+                backend TEXT NOT NULL, window_from TEXT, window_to TEXT, status TEXT NOT NULL,
+                command_json TEXT NOT NULL, receipt_json TEXT NOT NULL DEFAULT '{}',
+                started_at TEXT NOT NULL, completed_at TEXT,
+                FOREIGN KEY(audience_id) REFERENCES audiences(id) ON DELETE SET NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS source_artifacts (
+                id TEXT PRIMARY KEY, retrieval_job_id TEXT, path TEXT NOT NULL, sha256 TEXT NOT NULL,
+                backend TEXT NOT NULL, window_status TEXT NOT NULL, created_at TEXT NOT NULL,
+                UNIQUE(sha256, backend),
+                FOREIGN KEY(retrieval_job_id) REFERENCES retrieval_jobs(id) ON DELETE SET NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS retrieval_leases (
+                audience_id TEXT PRIMARY KEY, owner TEXT NOT NULL, acquired_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                FOREIGN KEY(audience_id) REFERENCES audiences(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS communities (
+                id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, source TEXT NOT NULL,
+                description TEXT, subscribers INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS community_snapshots (
+                id TEXT PRIMARY KEY, community_id TEXT NOT NULL, audience_id TEXT, run_id TEXT,
+                relevant_threads INTEGER NOT NULL, total_threads INTEGER NOT NULL,
+                engagement INTEGER NOT NULL, topical_concentration REAL NOT NULL,
+                coverage_confidence REAL NOT NULL, captured_at TEXT NOT NULL,
+                UNIQUE(community_id, audience_id, run_id),
+                FOREIGN KEY(community_id) REFERENCES communities(id) ON DELETE CASCADE,
+                FOREIGN KEY(audience_id) REFERENCES audiences(id) ON DELETE CASCADE,
+                FOREIGN KEY(run_id) REFERENCES runs(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS audience_communities (
+                audience_id TEXT NOT NULL, community_id TEXT NOT NULL, role TEXT NOT NULL,
+                relevance REAL NOT NULL, activity REAL NOT NULL, growth REAL,
+                topical_concentration REAL NOT NULL, coverage_confidence REAL NOT NULL,
+                first_seen_at TEXT NOT NULL, last_seen_at TEXT NOT NULL,
+                PRIMARY KEY(audience_id, community_id),
+                FOREIGN KEY(audience_id) REFERENCES audiences(id) ON DELETE CASCADE,
+                FOREIGN KEY(community_id) REFERENCES communities(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS saved_searches (
+                id TEXT PRIMARY KEY, name TEXT NOT NULL, audience_id TEXT, query TEXT NOT NULL,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(audience_id) REFERENCES audiences(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS saved_search_runs (
+                id TEXT PRIMARY KEY, saved_search_id TEXT NOT NULL, result_count INTEGER NOT NULL,
+                result_ids_json TEXT NOT NULL, ran_at TEXT NOT NULL,
+                FOREIGN KEY(saved_search_id) REFERENCES saved_searches(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS comment_classifications (
+                run_id TEXT NOT NULL, comment_id TEXT NOT NULL, relevance_label TEXT NOT NULL,
+                relevance_score REAL NOT NULL, lenses_json TEXT NOT NULL DEFAULT '[]',
+                purchase_intent TEXT NOT NULL DEFAULT 'none', exact_quote TEXT, sentiment TEXT NOT NULL,
+                competitors_json TEXT NOT NULL DEFAULT '[]', model_id TEXT,
+                PRIMARY KEY(run_id, comment_id),
+                FOREIGN KEY(run_id) REFERENCES runs(id) ON DELETE CASCADE,
+                FOREIGN KEY(comment_id) REFERENCES comments(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS opportunities (
+                id TEXT PRIMARY KEY, audience_id TEXT, theme_id TEXT, trigger_type TEXT NOT NULL,
+                status TEXT NOT NULL, priority INTEGER NOT NULL, confidence REAL NOT NULL,
+                title TEXT NOT NULL, content_job TEXT NOT NULL, hook_direction TEXT NOT NULL,
+                proof_type TEXT NOT NULL, cta TEXT NOT NULL, evidence_ids_json TEXT NOT NULL,
+                source_urls_json TEXT NOT NULL, guidance TEXT, notes TEXT,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(audience_id) REFERENCES audiences(id) ON DELETE CASCADE,
+                FOREIGN KEY(theme_id) REFERENCES themes(id) ON DELETE SET NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS opportunity_events (
+                id TEXT PRIMARY KEY, opportunity_id TEXT NOT NULL, from_status TEXT, to_status TEXT NOT NULL,
+                note TEXT, created_at TEXT NOT NULL,
+                FOREIGN KEY(opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE
+            )""",
+            """CREATE TABLE IF NOT EXISTS theme_snapshots (
+                id TEXT PRIMARY KEY, theme_id TEXT NOT NULL, audience_id TEXT, run_id TEXT NOT NULL,
+                thread_count INTEGER NOT NULL, engagement INTEGER NOT NULL, sentiment_json TEXT NOT NULL,
+                intent_json TEXT NOT NULL, competitor_json TEXT NOT NULL, captured_at TEXT NOT NULL,
+                UNIQUE(theme_id, run_id),
+                FOREIGN KEY(theme_id) REFERENCES themes(id) ON DELETE CASCADE,
+                FOREIGN KEY(run_id) REFERENCES runs(id) ON DELETE CASCADE
+            )""",
         ]
         with self.connection:
             for statement in statements:
@@ -263,10 +346,16 @@ class SignalStore:
                 self.connection.execute(
                     "CREATE VIRTUAL TABLE IF NOT EXISTS threads_fts USING fts5(thread_id UNINDEXED, title, body, subreddit)"
                 )
+                self.connection.execute(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS comments_fts USING fts5(comment_id UNINDEXED, thread_id UNINDEXED, body, subreddit)"
+                )
             except sqlite3.OperationalError:
                 pass
             self.connection.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, ?)", (utc_now(),)
+            )
+            self.connection.execute(
+                "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, ?)", (utc_now(),)
             )
 
     def integrity(self) -> str:
@@ -386,6 +475,8 @@ class OpenAIRouter:
         self.cache_hits = 0
         self.role_calls: Counter[str] = Counter()
         self.call_limit = int(os.environ.get("ATTRACT_SIGNAL_MAX_MODEL_CALLS", "40" if quality == "deep" else "20"))
+        self.token_limit = int(os.environ.get("ATTRACT_SIGNAL_MAX_MODEL_TOKENS", "400000" if quality == "deep" else "200000"))
+        self.tokens_used = 0
         self.error: Optional[str] = None
         if not os.environ.get("OPENAI_API_KEY"):
             self.error = "OPENAI_API_KEY is not configured"
@@ -438,7 +529,7 @@ class OpenAIRouter:
         reasoning_effort: str = "low",
     ) -> Optional[dict[str, Any]]:
         model = self.models.get(model_role)
-        if not self.client or not model or self.calls >= self.call_limit:
+        if not self.client or not model or self.calls >= self.call_limit or self.tokens_used >= self.token_limit:
             return None
         cache_key = hashlib.sha256(
             json.dumps([PROMPT_VERSION, stage, model, prompt, schema], sort_keys=True).encode("utf-8")
@@ -468,6 +559,7 @@ class OpenAIRouter:
             usage = getattr(response, "usage", None)
             input_tokens = getattr(usage, "input_tokens", None)
             output_tokens = getattr(usage, "output_tokens", None)
+            self.tokens_used += int(input_tokens or 0) + int(output_tokens or 0)
             status = "ok"
         except Exception as exc:
             payload, input_tokens, output_tokens, status = {"error": str(exc)}, None, None, "error"
@@ -486,7 +578,7 @@ class OpenAIRouter:
     ) -> Optional[dict[str, Any]]:
         """Run one long high-reasoning synthesis with Responses background mode."""
         model = self.models.get("synthesis")
-        if not self.client or not model or self.calls >= self.call_limit:
+        if not self.client or not model or self.calls >= self.call_limit or self.tokens_used >= self.token_limit:
             return None
         cache_key = hashlib.sha256(
             json.dumps([PROMPT_VERSION, "background", stage, model, prompt, schema], sort_keys=True).encode("utf-8")
@@ -521,6 +613,7 @@ class OpenAIRouter:
                 usage = getattr(response, "usage", None)
                 input_tokens = getattr(usage, "input_tokens", None)
                 output_tokens = getattr(usage, "output_tokens", None)
+                self.tokens_used += int(input_tokens or 0) + int(output_tokens or 0)
                 status = "ok"
             else:
                 payload = {"error": f"background response ended with status {getattr(response, 'status', 'unknown')}"}
@@ -585,12 +678,14 @@ class OpenAIRouter:
 
     def embedding(self, text: str) -> Optional[list[float]]:
         model = self.models.get("embedding")
-        if not self.client or not model or self.calls >= self.call_limit:
+        if not self.client or not model or self.calls >= self.call_limit or self.tokens_used >= self.token_limit:
             return None
         try:
             self.calls += 1
             self.role_calls["embedding"] += 1
             response = self.client.embeddings.create(model=model, input=text[:8000])
+            usage = getattr(response, "usage", None)
+            self.tokens_used += int(getattr(usage, "total_tokens", 0) or 0)
             return [float(value) for value in response.data[0].embedding]
         except Exception:
             return None
@@ -653,7 +748,7 @@ def normalize_inputs(paths: list[Path]) -> tuple[list[dict[str, Any]], dict[str,
             comments_by_id = {comment["id"]: comment for comment in existing["comments"]}
             comments_by_id.update({comment["id"]: comment for comment in comments})
             existing["comments"] = sorted(comments_by_id.values(), key=lambda row: row["upvotes"], reverse=True)[:25]
-            if len(record["body"]) > len(existing["body"]):
+            if len(str(record["body"])) > len(str(existing["body"])):
                 existing["body"] = record["body"]
     return list(merged.values()), checksums
 
@@ -900,6 +995,9 @@ def mean_vector(vectors: list[list[float]]) -> list[float]:
 
 
 def theme_label(records: list[dict[str, Any]], anchors: set[str]) -> str:
+    if len(records) == 1:
+        title = legacy.clean_text(records[0].get("title"))
+        return sentence_excerpt(title, 88).rstrip("?.!") or "One-off audience conversation"
     counts: Counter[str] = Counter()
     for record in records:
         counts.update(token for token in text_tokens(f"{record['title']} {record['body']}") if token not in anchors)
@@ -950,6 +1048,34 @@ def cluster_records(
             "engagement": sum(member["upvotes"] + member["comment_count"] for member in members),
         })
     return sorted(result, key=lambda row: (row["recurring"], row["thread_count"], row["engagement"]), reverse=True)
+
+
+def stabilize_theme_ids(
+    store: SignalStore, themes: list[dict[str, Any]], audience_id: Optional[str], threshold: float = 0.80,
+) -> int:
+    """Match clusters to prior audience centroids so labels can evolve without changing IDs."""
+    if not audience_id or not themes:
+        return 0
+    rows = store.connection.execute(
+        "SELECT id,label,centroid_json FROM themes WHERE audience_id=? ORDER BY last_seen_at DESC",
+        (audience_id,),
+    ).fetchall()
+    prior = [(row["id"], row["label"], json.loads(row["centroid_json"])) for row in rows]
+    claimed: set[str] = set()
+    matched = 0
+    for theme in themes:
+        candidates = [(cosine(theme["centroid"], centroid), identifier, label) for identifier, label, centroid in prior if identifier not in claimed]
+        if not candidates:
+            continue
+        similarity, identifier, prior_label = max(candidates)
+        if similarity < threshold:
+            continue
+        theme["id"] = identifier
+        theme["previous_label"] = prior_label
+        theme["centroid_similarity"] = round(similarity, 4)
+        claimed.add(identifier)
+        matched += 1
+    return matched
 
 
 def refine_theme_labels(themes: list[dict[str, Any]], records: list[dict[str, Any]], router: OpenAIRouter) -> int:
@@ -1067,7 +1193,7 @@ def content_opportunities(
         candidates.extend(theme for theme in themes if not theme["recurring"])
     result = []
     record_map = {record["id"]: record for record in records}
-    for index, theme in enumerate(candidates[:limit], 1):
+    for theme in candidates[:limit]:
         evidence = [record_map[item] for item in theme["supporting_thread_ids"] if item in record_map]
         if not evidence:
             continue
@@ -1083,20 +1209,45 @@ def content_opportunities(
         else:
             content_job, proof = "educate", "Education"
         path = brand.get("primary_path") or "sub"
+        avatar = brand.get("audience") or evidence[0]["subreddit"]
         audience_need = evidence[0]["exact_quote"] or evidence[0]["title"]
         source_urls = list(dict.fromkeys(item["canonical_url"] for item in evidence))
+        hook_templates = {
+            "compare": "Before you switch tools, check these three things.",
+            "answer": "Here is the decision framework this question actually needs.",
+            "demonstrate": "This workflow fails before the customer ever books.",
+            "challenge": "The popular take misses one important tradeoff.",
+            "educate": "The price question is really a value question.",
+        }
+        hook = hook_templates[content_job]
+        promise = {
+            "compare": "Make a confident switching decision without trading one failure mode for another.",
+            "answer": "Turn an open question into a practical next decision.",
+            "demonstrate": "See the broken workflow and the smallest useful fix.",
+            "challenge": "Understand both sides of the debate before choosing a position.",
+            "educate": "Connect cost to the outcome and constraints that determine value.",
+        }[content_job]
         result.append({
-            "id": stable_id("opportunity", theme["id"], index),
+            "id": stable_id("opportunity", theme["id"], content_job),
             "theme_id": theme["id"], "theme_label": theme["label"],
             "audience_need": audience_need, "content_job": content_job,
-            "hook_direction": f"What people misunderstand about {theme['label'].lower()}",
+            "hook_direction": hook,
             "proof_type": proof, "cta": path, "confidence": theme["confidence"],
             "trend_claim_allowed": bool(theme["recurring"]),
             "evidence_ids": [item["id"] for item in evidence], "source_urls": source_urls,
-            "working_title": f"The real issue with {theme['label'].lower()}",
-            "hook_0_2s": f"If {theme['label'].lower()} keeps coming up, this is why.",
-            "meat": f"Show the evidence-backed {content_job} path without copying the source wording.",
+            "working_title": f"{theme['label']}: an evidence-backed {content_job} guide",
+            "hook_0_2s": hook,
+            "avatar": avatar, "promise": promise, "proof_meat": proof, "path": path,
+            "meat": f"Use {len(evidence)} cited conversation(s) to {content_job} the problem, show the decision criteria, and keep source wording attributed.",
             "payoff": "Give the audience a clear next decision or practical test.",
+            "script": {
+                "hook": hook,
+                "setup": f"Name the situation behind {theme['label'].lower()} without overstating prevalence.",
+                "proof": f"Show a {proof.lower()} backed by the linked evidence.",
+                "cta": path,
+            },
+            "shot_list": ["Pattern-interrupt opener", "On-screen decision criteria", "Proof or walkthrough", "Single next-step CTA"],
+            "contribution_guidance": "Add original analysis and practical help; do not copy distinctive Reddit phrasing into marketing copy.",
         })
     return result
 
@@ -1280,17 +1431,24 @@ def create_alerts(
 
 
 def read_last30days_version() -> tuple[Optional[str], Optional[Path]]:
-    candidates = [
+    configured = os.environ.get("LAST30DAYS_SKILL_DIR")
+    candidates = ([Path(configured).expanduser() / "SKILL.md"] if configured else []) + [
         Path.home() / ".codex/skills/last30days/SKILL.md",
         Path.home() / ".agents/skills/last30days/SKILL.md",
         Path.home() / ".claude/skills/last30days/SKILL.md",
     ]
+    found: dict[Path, str] = {}
     for path in candidates:
         if path.exists():
             text = path.read_text(encoding="utf-8", errors="replace")[:3000]
             match = re.search(r"^version:\s*[\"']?([^\"'\s]+)", text, re.MULTILINE)
-            return (match.group(1) if match else None), path
-    return None, None
+            if match:
+                found[path.parent.resolve()] = match.group(1)
+    compatible = [(version, root) for root, version in found.items() if last30days_compatible(version)]
+    if not compatible:
+        return (next(iter(found.values())) if found else None), (next(iter(found)) / "SKILL.md" if found else None)
+    version, root = max(compatible, key=lambda item: tuple(int(part) for part in item[0].split(".")[:3]))
+    return version, root / "SKILL.md"
 
 
 def last30days_compatible(version: Optional[str]) -> bool:
@@ -1405,6 +1563,7 @@ def run_research(
     relevant.sort(key=lambda row: (row["signal_score"], row["comment_count"], row["upvotes"]), reverse=True)
     status, status_reasons = corpus_status(relevant)
     themes = cluster_records(relevant, topic, router if router.enabled else None)
+    stable_theme_matches = stabilize_theme_ids(store, themes, audience_id)
     refined_themes = refine_theme_labels(themes, relevant, router)
     opportunities = content_opportunities(status, themes, relevant, brand)
     query_plan = build_query_plan(topic, relevant, brand)
@@ -1432,6 +1591,7 @@ def run_research(
             "model_calls": router.calls, "model_cache_hits": router.cache_hits,
             "model_input_tokens": int(usage_row["input_tokens"]),
             "model_output_tokens": int(usage_row["output_tokens"]),
+            "model_token_ceiling": router.token_limit,
             "model_elapsed_ms": int(usage_row["elapsed_ms"]),
             "model_calls_by_role": dict(router.role_calls),
             "sol_call_share": round(router.role_calls.get("synthesis", 0) / max(1, router.calls), 3),
@@ -1439,6 +1599,7 @@ def run_research(
             "comments": sum(record["comment_count"] for record in relevant),
             "communities": len({record["subreddit"].lower() for record in relevant}),
             "recurring_themes": sum(1 for theme in themes if theme["recurring"]),
+            "stable_theme_matches": stable_theme_matches,
             "semantically_refined_themes": refined_themes,
             "stage_timings": stage_timings,
         },
@@ -1453,8 +1614,8 @@ def run_research(
     }
     if not router.enabled:
         run["limits"].append("Semantic adjudication and model synthesis were unavailable; precision-first deterministic mode was used.")
-    elif router.calls >= router.call_limit:
-        run["limits"].append("Model call budget was reached; remaining evidence used validated deterministic analysis.")
+    elif router.calls >= router.call_limit or router.tokens_used >= router.token_limit:
+        run["limits"].append("Model call or token budget was reached; remaining evidence used validated deterministic analysis.")
     if status == "limited":
         run["limits"].append("Corpus is limited; findings may be cited, but recurring trend claims require two independent threads.")
     if status == "insufficient":
@@ -1511,7 +1672,7 @@ def render_markdown(run: dict[str, Any]) -> str:
         grouped[record["subreddit"]].append(record)
     for subreddit, rows in sorted(grouped.items(), key=lambda item: len(item[1]), reverse=True):
         lenses = Counter(lens for row in rows for lens in row["lenses"])
-        labels = ", ".join(LENS_LABELS[key] for key, _ in lenses.most_common(3)) or "None"
+        labels = ", ".join(str(LENS_LABELS[key]) for key, _ in lenses.most_common(3)) or "None"
         lines.append(
             f"| r/{md_cell(subreddit)} | {len(rows)} | {sum(row['upvotes'] for row in rows)} | "
             f"{sum(row['comment_count'] for row in rows)} | {md_cell(labels)} |"
@@ -1717,6 +1878,81 @@ const q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];fun
             f'<p>{evidence_links}</p></article>'
         )
     opportunity_html = "".join(opportunity_parts) or '<p class="empty">Content generation is withheld until the corpus is sufficient.</p>'
+    community_parts = []
+    for community in run.get("communities", []):
+        growth = "Not enough history" if community.get("growth") is None else f"{community['growth'] * 100:+.0f}%"
+        flags = []
+        if community.get("growing"):
+            flags.append("Growing")
+        if community.get("breakout"):
+            flags.append("Breakout")
+        community_parts.append(
+            f'<article class="theme"><div class="eyebrow">{esc(community.get("role", "candidate"))}</div>'
+            f'<h3>r/{esc(community["name"])}</h3><p>{community["relevant_threads"]} relevant of '
+            f'{community["total_threads"]} observed threads. Growth: {esc(growth)}.</p>'
+            f'<div class="chips"><span class="chip">Concentration {community["topical_concentration"]:.0%}</span>'
+            f'<span class="chip">Coverage {community["coverage_confidence"]:.0%}</span>'
+            f'<span class="chip">{esc(", ".join(flags) or "Observed")}</span></div></article>'
+        )
+    community_html = "".join(community_parts) or '<p class="empty">Community snapshots become available after v2 post-processing.</p>'
+    durable_opportunities = []
+    try:
+        rows = store.connection.execute(
+            "SELECT id,status,priority,trigger_type,title,source_urls_json FROM opportunities "
+            "WHERE audience_id IS ? ORDER BY priority DESC,updated_at DESC LIMIT 30",
+            (run.get("audience_id"),),
+        ).fetchall()
+        durable_opportunities = [dict(row) for row in rows]
+    except sqlite3.OperationalError:
+        durable_opportunities = []
+    inbox_html = "".join(
+        f'<article class="theme"><div class="eyebrow">{esc(row["status"])} · priority {row["priority"]}</div>'
+        f'<h3>{esc(row["title"])}</h3><p>{esc(row["trigger_type"].replace("_", " "))}</p></article>'
+        for row in durable_opportunities
+    ) or '<p class="empty">No durable opportunities yet.</p>'
+    lens_summary = "".join(
+        f'<article class="metric"><strong>{sum(1 for row in run["threads"] if key in row["lenses"])}</strong>'
+        f'<span>{esc(label)}</span></article>' for key, label in LENS_LABELS.items()
+    )
+    money_rows = [row for row in run["threads"] if "money_talk" in row["lenses"]]
+    switching_rows = [row for row in run["threads"] if "seeking_alternatives" in row["lenses"]]
+    commercial_html = "".join(
+        f'<article class="thread"><h3>{esc(row["title"])}</h3><p class="quote">“{esc(row["exact_quote"]) }”</p>'
+        f'<a href="{esc(row["canonical_url"])}" target="_blank" rel="noreferrer">Evidence</a></article>'
+        for row in (money_rows + switching_rows)[:20]
+    ) or '<p class="empty">No explicit money or switching evidence survived relevance review.</p>'
+    saved_search_rows = store.connection.execute(
+        "SELECT name,query,updated_at FROM saved_searches WHERE audience_id IS ? ORDER BY updated_at DESC LIMIT 20",
+        (run.get("audience_id"),),
+    ).fetchall()
+    saved_search_html = "".join(
+        f'<article class="theme"><h3>{esc(row["name"])}</h3><p><code>{esc(row["query"])}</code></p>'
+        f'<small>Updated {esc(row["updated_at"])}</small></article>' for row in saved_search_rows
+    ) or '<p class="empty">No saved searches for this audience.</p>'
+    change_parts = []
+    for theme in run.get("themes", []):
+        snapshots = store.connection.execute(
+            "SELECT thread_count,engagement,captured_at FROM theme_snapshots WHERE theme_id=? ORDER BY captured_at DESC LIMIT 2",
+            (theme["id"],),
+        ).fetchall()
+        if len(snapshots) < 2:
+            continue
+        current, previous = snapshots[0], snapshots[1]
+        change_parts.append(
+            f'<article class="theme"><h3>{esc(theme["label"])}</h3>'
+            f'<p>Threads {previous["thread_count"]} → {current["thread_count"]}; engagement '
+            f'{previous["engagement"]} → {current["engagement"]}.</p>'
+            f'<small>{esc(previous["captured_at"])} to {esc(current["captured_at"])}</small></article>'
+        )
+    changes_html = "".join(change_parts) or '<p class="empty">Comparable theme history needs at least two snapshots.</p>'
+    live_health = run.get("backend_health", {}).get("live_retrieval", {})
+    coverage_html = (
+        f'<article class="theme"><h3>Last30Days {esc(run.get("source_engine_version") or live_health.get("version") or "unknown")}</h3>'
+        f'<p>Semantic mode: {esc(run["backend_health"].get("semantic"))}. '
+        f'Public Reddit: {esc(run["backend_health"].get("public_reddit"))}. '
+        f'ScrapeCreators: {esc(run["backend_health"].get("scrapecreators"))}.</p>'
+        f'<p>{len(live_health.get("receipts", []))} live retrieval receipt(s) attached.</p></article>'
+    )
     options = "".join(f'<option value="{esc(item)}">r/{esc(item)}</option>' for item in communities)
     lens_options = "".join(f'<option value="{esc(key)}">{esc(label)}</option>' for key, label in LENS_LABELS.items())
     purchase_options = "".join(f'<option value="{esc(item)}">{esc(item)}</option>' for item in PURCHASE_LEVELS)
@@ -1730,10 +1966,17 @@ const q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];fun
 <select id="lens" aria-label="Filter by lens"><option value="">All lenses</option>{lens_options}</select>
 <select id="subreddit" aria-label="Filter by subreddit"><option value="">All communities</option>{options}</select>
 <select id="purchase" aria-label="Filter by purchase intent"><option value="">All intent levels</option>{purchase_options}</select></div>
+<section class="section"><h2>Run health and coverage</h2><div class="grid">{coverage_html}</div></section>
+<section class="section"><h2>Five conversation lenses</h2><div class="metrics">{lens_summary}</div></section>
+<section class="section"><h2>Community discovery</h2><div class="grid">{community_html}</div></section>
+<section class="section"><h2>Saved searches</h2><div class="grid">{saved_search_html}</div></section>
 <section class="section"><h2>Alerts</h2><div class="grid">{alert_html}</div></section>
 <section class="section"><h2>Themes</h2><div class="grid">{theme_html}</div></section>
+<section class="section"><h2>Run-over-run changes</h2><div class="grid">{changes_html}</div></section>
 <section class="section"><h2>Conversation evidence</h2>{thread_html}</section>
-<section class="section"><h2>Content opportunities</h2><div class="grid">{opportunity_html}</div></section>
+<section class="section"><h2>Money and switching signals</h2>{commercial_html}</section>
+<section class="section"><h2>Opportunity inbox</h2><div class="grid">{inbox_html}</div></section>
+<section class="section"><h2>Content handoff</h2><div class="grid">{opportunity_html}</div></section>
 <section class="section"><h2>Excluded noise</h2>{excluded_html}</section>
 </main><script>{script}</script></body></html>"""
 
